@@ -1,0 +1,24 @@
+# IntelliJ IDEA
+.idea/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+
+# Temporary
+*.tmp
+*.temp
+
+# Environment / secrets
+.env
+.env.*
+
+# Archives
+*.zip
+*.rar
+*.7z

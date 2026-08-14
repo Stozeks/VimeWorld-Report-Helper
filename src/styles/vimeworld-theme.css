@@ -1,0 +1,927 @@
+/* ============================================================
+   VIMEWORLD REPORT HELPER
+   VIMEWORLD DARK THEME
+   ============================================================ */
+
+
+/* ============================================================
+   ROOT
+   ============================================================ */
+
+:root {
+    --vrh-bg: #050b12;
+    --vrh-bg-soft: #08121d;
+
+    --vrh-panel: rgba(8, 18, 29, 0.94);
+    --vrh-panel-soft: rgba(11, 24, 38, 0.88);
+
+    --vrh-border: rgba(104, 164, 255, 0.18);
+    --vrh-border-hover: rgba(104, 164, 255, 0.35);
+
+    --vrh-text: #f4f7fb;
+    --vrh-text-soft: #a8b3c2;
+    --vrh-text-muted: #728096;
+
+    --vrh-blue: #3d8cff;
+    --vrh-blue-soft: rgba(61, 140, 255, 0.15);
+
+    --vrh-green: #55e46f;
+    --vrh-green-soft: rgba(85, 228, 111, 0.14);
+
+    --vrh-red: #ff5948;
+    --vrh-red-soft: rgba(255, 89, 72, 0.13);
+
+    --vrh-orange: #f49b22;
+
+    --vrh-radius: 12px;
+
+    --vrh-shadow:
+            0 18px 45px rgba(0, 0, 0, 0.35);
+}
+
+
+/* ============================================================
+   PAGE
+   ============================================================ */
+
+html,
+body {
+    min-height: 100% !important;
+}
+
+
+html {
+    background:
+            #03070c !important;
+}
+
+
+body {
+    min-height: 100vh !important;
+
+    background-color:
+            #050b12 !important;
+
+    background-image:
+            linear-gradient(
+                    180deg,
+                    rgba(2, 8, 15, 0.20) 0%,
+                    rgba(2, 8, 15, 0.32) 48%,
+                    rgba(2, 8, 15, 0.48) 100%
+            ),
+            var(--vrh-site-background) !important;
+
+    background-size:
+            cover !important;
+
+    background-position:
+            center center !important;
+
+    background-repeat:
+            no-repeat !important;
+
+    background-attachment:
+            fixed !important;
+
+    color:
+            var(--vrh-text) !important;
+}
+
+
+/* ============================================================
+   NAVBAR
+   ============================================================ */
+
+.navbar {
+    min-height:
+            72px !important;
+
+    margin-bottom:
+            24px !important;
+
+    background:
+            rgba(4, 11, 18, 0.94) !important;
+
+    border:
+            0 !important;
+
+    border-bottom:
+            1px solid rgba(110, 168, 255, 0.14) !important;
+
+    box-shadow:
+            0 10px 30px rgba(0, 0, 0, 0.18) !important;
+}
+
+
+.navbar .container,
+.navbar .container-fluid {
+    min-height:
+            72px !important;
+}
+
+
+.navbar-brand {
+    height:
+            72px !important;
+
+    display:
+            flex !important;
+
+    align-items:
+            center !important;
+
+    color:
+            var(--vrh-text) !important;
+
+    font-weight:
+            700 !important;
+
+    font-size:
+            23px !important;
+}
+
+
+.navbar-nav > li > a {
+    min-height:
+            72px !important;
+
+    display:
+            flex !important;
+
+    align-items:
+            center !important;
+
+    color:
+            #b7c1cf !important;
+
+    background:
+            transparent !important;
+
+    font-weight:
+            500 !important;
+
+    transition:
+            color 150ms ease,
+            background 150ms ease !important;
+}
+
+
+.navbar-nav > li > a:hover {
+    color:
+            #ffffff !important;
+
+    background:
+            rgba(61, 140, 255, 0.06) !important;
+}
+
+
+.navbar-nav > .active > a,
+.navbar-nav > .active > a:hover,
+.navbar-nav > .active > a:focus {
+    position:
+            relative;
+
+    color:
+            #ffffff !important;
+
+    background:
+            transparent !important;
+}
+
+
+.navbar-nav > .active > a::after {
+    content:
+            '';
+
+    position:
+            absolute;
+
+    left:
+            18px;
+
+    right:
+            18px;
+
+    bottom:
+            0;
+
+    height:
+            3px;
+
+    border-radius:
+            3px 3px 0 0;
+
+    background:
+            var(--vrh-blue);
+
+    box-shadow:
+            0 0 12px rgba(61, 140, 255, 0.45);
+}
+
+
+/* ============================================================
+   MAIN WRAPPER
+   ============================================================ */
+
+.wrap {
+    background:
+            transparent !important;
+}
+
+
+.wrap > .container,
+.wrap > .container-fluid {
+    background:
+            transparent !important;
+}
+
+
+/* ============================================================
+   OLD BOOTSTRAP PANEL
+   ============================================================ */
+
+.panel {
+    background:
+            linear-gradient(
+                    180deg,
+                    rgba(10, 23, 36, 0.95),
+                    rgba(6, 16, 26, 0.95)
+            ) !important;
+
+    border:
+            1px solid var(--vrh-border) !important;
+
+    border-radius:
+            var(--vrh-radius) !important;
+
+    box-shadow:
+            var(--vrh-shadow) !important;
+
+    color:
+            var(--vrh-text) !important;
+}
+
+
+.panel-heading,
+.panel-footer {
+    background:
+            rgba(255, 255, 255, 0.025) !important;
+
+    border-color:
+            rgba(255, 255, 255, 0.07) !important;
+
+    color:
+            var(--vrh-text) !important;
+}
+
+
+/* ============================================================
+   HEADINGS
+   ============================================================ */
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    color:
+            var(--vrh-text) !important;
+}
+
+
+h1 {
+    font-weight:
+            500 !important;
+}
+
+
+/* ============================================================
+   FORM CONTROLS
+   ============================================================ */
+
+.form-control,
+input[type="text"],
+input[type="number"],
+input[type="search"],
+select,
+textarea {
+    background:
+            rgba(5, 14, 23, 0.78) !important;
+
+    border:
+            1px solid rgba(124, 159, 198, 0.22) !important;
+
+    color:
+            #edf4ff !important;
+
+    border-radius:
+            7px !important;
+
+    box-shadow:
+            none !important;
+
+    transition:
+            border-color 150ms ease,
+            box-shadow 150ms ease,
+            background 150ms ease !important;
+}
+
+
+.form-control::placeholder,
+input::placeholder,
+textarea::placeholder {
+    color:
+            #728096 !important;
+}
+
+
+.form-control:focus,
+input:focus,
+select:focus,
+textarea:focus {
+    background:
+            rgba(8, 20, 33, 0.95) !important;
+
+    border-color:
+            rgba(61, 140, 255, 0.72) !important;
+
+    box-shadow:
+            0 0 0 3px rgba(61, 140, 255, 0.12) !important;
+
+    outline:
+            none !important;
+}
+
+
+/* ============================================================
+   DEFAULT BUTTON
+   ============================================================ */
+
+.btn {
+    border-radius:
+            7px !important;
+
+    font-weight:
+            600 !important;
+
+    border-width:
+            1px !important;
+
+    transition:
+            transform 100ms ease,
+            filter 100ms ease,
+            background 120ms ease,
+            border-color 120ms ease,
+            box-shadow 120ms ease !important;
+}
+
+
+.btn:hover {
+    transform:
+            translateY(-1px);
+}
+
+
+.btn:active {
+    transform:
+            translateY(0);
+}
+
+
+/* ============================================================
+   PRIMARY / FILTER
+   ============================================================ */
+
+.btn-primary,
+.btn-info {
+    color:
+            #ffffff !important;
+
+    background:
+            linear-gradient(
+                    180deg,
+                    #347eea,
+                    #215fc6
+            ) !important;
+
+    border-color:
+            rgba(89, 155, 255, 0.75) !important;
+
+    box-shadow:
+            0 5px 15px rgba(34, 105, 211, 0.18) !important;
+}
+
+
+.btn-primary:hover,
+.btn-info:hover {
+    filter:
+            brightness(1.08);
+}
+
+
+/* ============================================================
+   SUCCESS / VIEW / MUTE
+   ============================================================ */
+
+.btn-success {
+    color:
+            #eaffee !important;
+
+    background:
+            linear-gradient(
+                    180deg,
+                    rgba(52, 161, 77, 0.95),
+                    rgba(31, 116, 52, 0.95)
+            ) !important;
+
+    border-color:
+            rgba(90, 226, 115, 0.55) !important;
+
+    box-shadow:
+            0 5px 16px rgba(48, 183, 78, 0.15) !important;
+}
+
+
+.btn-success:hover {
+    filter:
+            brightness(1.08);
+}
+
+
+/* ============================================================
+   WARNING / REJECT
+   ============================================================ */
+
+.btn-warning {
+    color:
+            #fff2eb !important;
+
+    background:
+            linear-gradient(
+                    180deg,
+                    rgba(209, 74, 43, 0.96),
+                    rgba(151, 43, 28, 0.96)
+            ) !important;
+
+    border-color:
+            rgba(255, 101, 75, 0.75) !important;
+
+    box-shadow:
+            0 5px 16px rgba(211, 62, 38, 0.15) !important;
+}
+
+
+.btn-warning:hover {
+    filter:
+            brightness(1.10);
+}
+
+
+/* ============================================================
+   DEFAULT / CLOSE
+   ============================================================ */
+
+.btn-default {
+    color:
+            #e0e6ee !important;
+
+    background:
+            rgba(20, 34, 49, 0.92) !important;
+
+    border-color:
+            rgba(135, 160, 188, 0.26) !important;
+}
+
+
+.btn-default:hover {
+    color:
+            #ffffff !important;
+
+    background:
+            rgba(28, 45, 64, 0.96) !important;
+
+    border-color:
+            rgba(146, 176, 211, 0.38) !important;
+}
+
+
+/* ============================================================
+   REPORT TABLE
+   ============================================================ */
+
+.table {
+    margin-bottom:
+            0 !important;
+
+    color:
+            var(--vrh-text) !important;
+
+    background:
+            transparent !important;
+}
+
+
+.table > thead > tr > th {
+    padding:
+            16px 14px !important;
+
+    background:
+            rgba(18, 36, 55, 0.72) !important;
+
+    color:
+            #aab7c8 !important;
+
+    border:
+            0 !important;
+
+    border-bottom:
+            1px solid rgba(125, 165, 210, 0.16) !important;
+
+    font-weight:
+            500 !important;
+}
+
+
+.table > tbody > tr {
+    background:
+            rgba(5, 14, 23, 0.52) !important;
+
+    transition:
+            background 120ms ease,
+            box-shadow 120ms ease !important;
+}
+
+
+.table > tbody > tr:hover {
+    background:
+            rgba(17, 35, 53, 0.84) !important;
+
+    box-shadow:
+            inset 3px 0 0 var(--vrh-blue) !important;
+}
+
+
+.table > tbody > tr > td {
+    padding:
+            15px 14px !important;
+
+    color:
+            #e5ebf3 !important;
+
+    border:
+            0 !important;
+
+    border-bottom:
+            1px solid rgba(255, 255, 255, 0.055) !important;
+
+    vertical-align:
+            middle !important;
+}
+
+
+/* ============================================================
+   LINKS
+   ============================================================ */
+
+a {
+    color:
+            #6ca8ff;
+}
+
+
+a:hover,
+a:focus {
+    color:
+            #8cbbff;
+}
+
+
+/* ============================================================
+   PAGINATION
+   ============================================================ */
+
+.pagination > li > a,
+.pagination > li > span {
+    background:
+            rgba(6, 16, 27, 0.92) !important;
+
+    color:
+            #9cacbd !important;
+
+    border-color:
+            rgba(117, 152, 190, 0.16) !important;
+}
+
+
+.pagination > li > a:hover {
+    background:
+            rgba(20, 43, 66, 0.95) !important;
+
+    color:
+            #ffffff !important;
+}
+
+
+.pagination > .active > a,
+.pagination > .active > span,
+.pagination > .active > a:hover {
+    background:
+            rgba(61, 140, 255, 0.16) !important;
+
+    color:
+            #ffffff !important;
+
+    border-color:
+            rgba(61, 140, 255, 0.45) !important;
+
+    box-shadow:
+            inset 0 0 12px rgba(61, 140, 255, 0.08) !important;
+}
+
+
+/* ============================================================
+   REPORT MODAL
+   ============================================================ */
+
+.modal {
+    color:
+            var(--vrh-text) !important;
+}
+
+
+.modal-backdrop {
+    background:
+            #010407 !important;
+}
+
+
+.modal-backdrop.in {
+    opacity:
+            0.62 !important;
+}
+
+
+#view_report .modal-dialog {
+    width:
+            min(860px, calc(100vw - 50px)) !important;
+
+    margin:
+            70px auto !important;
+}
+
+
+#view_report .modal-content {
+    overflow:
+            hidden !important;
+
+    background:
+            linear-gradient(
+                    180deg,
+                    rgba(9, 21, 34, 0.98),
+                    rgba(5, 14, 23, 0.985)
+            ) !important;
+
+    border:
+            1px solid rgba(102, 157, 222, 0.24) !important;
+
+    border-radius:
+            14px !important;
+
+    box-shadow:
+            0 24px 70px rgba(0, 0, 0, 0.52) !important;
+
+    color:
+            var(--vrh-text) !important;
+}
+
+
+#view_report .modal-header {
+    padding:
+            20px 24px !important;
+
+    background:
+            rgba(255, 255, 255, 0.018) !important;
+
+    border-bottom:
+            1px solid rgba(255, 255, 255, 0.07) !important;
+}
+
+
+#view_report .modal-title,
+#view_report .modal-header h4,
+#view_report .modal-header h5 {
+    color:
+            #ffffff !important;
+
+    font-weight:
+            500 !important;
+}
+
+
+#view_report .modal-header .close {
+    color:
+            #cbd4df !important;
+
+    opacity:
+            0.75 !important;
+
+    text-shadow:
+            none !important;
+}
+
+
+#view_report .modal-header .close:hover {
+    color:
+            #ffffff !important;
+
+    opacity:
+            1 !important;
+}
+
+
+#view_report .modal-body {
+    padding:
+            22px 24px !important;
+
+    background:
+            transparent !important;
+}
+
+
+#view_report .modal-footer {
+    padding:
+            16px 24px !important;
+
+    background:
+            rgba(255, 255, 255, 0.018) !important;
+
+    border-top:
+            1px solid rgba(255, 255, 255, 0.07) !important;
+}
+
+
+/* ============================================================
+   REPORT MODAL TABLE
+   ============================================================ */
+
+#view_report .table {
+    overflow:
+            hidden;
+
+    border:
+            1px solid rgba(111, 157, 209, 0.15) !important;
+
+    border-radius:
+            10px !important;
+}
+
+
+#view_report .table > thead > tr > th {
+    background:
+            rgba(19, 42, 64, 0.88) !important;
+}
+
+
+#view_report .table > tbody > tr > td {
+    background:
+            rgba(6, 17, 28, 0.74) !important;
+}
+
+
+/* ============================================================
+   REPORT MESSAGES
+   ============================================================ */
+
+#mr_messages {
+    margin-top:
+            10px !important;
+
+    padding:
+            14px 16px !important;
+
+    max-height:
+            390px;
+
+    overflow-y:
+            auto;
+
+    background:
+            rgba(4, 13, 22, 0.55) !important;
+
+    border:
+            1px solid rgba(118, 157, 198, 0.12) !important;
+
+    border-radius:
+            9px !important;
+
+    color:
+            #e4eaf2 !important;
+
+    line-height:
+            1.65 !important;
+}
+
+
+#mr_messages .text-muted {
+    color:
+            #758499 !important;
+}
+
+
+/* ============================================================
+   SCROLLBAR
+   ============================================================ */
+
+#mr_messages::-webkit-scrollbar {
+    width:
+            8px;
+}
+
+
+#mr_messages::-webkit-scrollbar-track {
+    background:
+            rgba(255, 255, 255, 0.025);
+}
+
+
+#mr_messages::-webkit-scrollbar-thumb {
+    background:
+            rgba(112, 147, 188, 0.26);
+
+    border-radius:
+            10px;
+}
+
+
+#mr_messages::-webkit-scrollbar-thumb:hover {
+    background:
+            rgba(112, 147, 188, 0.42);
+}
+
+
+/* ============================================================
+   ALERTS
+   ============================================================ */
+
+.alert {
+    border-radius:
+            8px !important;
+
+    border-width:
+            1px !important;
+}
+
+
+.alert-success {
+    color:
+            #c9f5d0 !important;
+
+    background:
+            rgba(49, 153, 67, 0.13) !important;
+
+    border-color:
+            rgba(74, 196, 92, 0.27) !important;
+}
+
+
+.alert-danger {
+    color:
+            #ffd2ce !important;
+
+    background:
+            rgba(199, 55, 45, 0.13) !important;
+
+    border-color:
+            rgba(255, 84, 72, 0.26) !important;
+}
+
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+
+footer,
+.footer {
+    color:
+            #788598 !important;
+
+    background:
+            rgba(4, 11, 18, 0.55) !important;
+
+    border-top:
+            1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+
+/* ============================================================
+   SELECTION
+   ============================================================ */
+
+::selection {
+    color:
+            #ffffff;
+
+    background:
+            rgba(61, 140, 255, 0.55);
+}

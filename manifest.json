@@ -1,0 +1,44 @@
+{
+  "manifest_version": 3,
+  "name": "VimeWorld Report Helper",
+  "version": "0.4.1",
+  "description": "Local moderation assistant for VimeWorld Reports.",
+  "permissions": [
+    "storage"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://legacy-cp.vimeworld.com/moder/reports*"
+      ],
+      "js": [
+        "src/core/dom-adapter.js",
+        "src/features/message-parser.js",
+        "src/data/prohibited-words.js",
+        "src/data/violation-rules.js",
+        "src/features/violation-scanner.js",
+        "src/features/monthly-stats.js",
+        "src/ui/report-panel.js",
+        "src/ui/stats-panel.js",
+        "src/features/reason-undo.js",
+        "src/content.js"
+      ],
+      "css": [
+        "src/styles/vimeworld-theme.css",
+        "src/styles/report-helper.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "src/data/prohibited-words.txt",
+        "src/assets/vimeworld-bg.png"
+      ],
+      "matches": [
+        "https://legacy-cp.vimeworld.com/*"
+      ]
+    }
+  ]
+}
