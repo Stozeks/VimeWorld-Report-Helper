@@ -9,6 +9,16 @@
     const MULTIPLE_REASON_THRESHOLD =
         5;
 
+    /*
+     * Flood и Flood символами —
+     * взаимоисключающие причины.
+     */
+    const FLOOD_REASON_IDS =
+        new Set([
+            'flood',
+            'flood-symbols'
+        ]);
+
 
     /* =========================================================
        PUNISHMENT GROUPS
@@ -1809,9 +1819,55 @@
         handleReasonClick(
             definition
         ) {
+
+            /*
+             * =====================================================
+             * FLOOD MUTUAL EXCLUSION
+             * =====================================================
+             *
+             * Flood и Flood символами нельзя использовать
+             * одновременно и нельзя стакать.
+             */
+
+            if (
+                FLOOD_REASON_IDS.has(
+                    definition.id
+                )
+            ) {
+
+                const floodAlreadySelected =
+                    Array
+                        .from(
+                            FLOOD_REASON_IDS
+                        )
+                        .some(
+                            (reasonId) =>
+                                (
+                                    this.reasonStacks.get(
+                                        reasonId
+                                    ) ?? 0
+                                ) > 0
+                        );
+
+
+                if (
+                    floodAlreadySelected
+                ) {
+                    return;
+                }
+            }
+
+
+            /*
+             * =====================================================
+             * GROUPED REASONS
+             * =====================================================
+             */
+
             if (
                 definition.group
             ) {
+
                 const group =
                     PUNISHMENT_GROUPS[
                         definition.group
@@ -1860,6 +1916,12 @@
                 return;
             }
 
+
+            /*
+             * =====================================================
+             * NORMAL REASONS
+             * =====================================================
+             */
 
             const stacks =
                 this.reasonStacks.get(
@@ -2154,6 +2216,27 @@
 
 
         updateReasonButtons() {
+
+            /*
+             * Проверяем один раз для всего обновления UI,
+             * выбрана ли уже одна из Flood-причин.
+             */
+
+            const floodSelected =
+                Array
+                    .from(
+                        FLOOD_REASON_IDS
+                    )
+                    .some(
+                        (reasonId) =>
+                            (
+                                this.reasonStacks.get(
+                                    reasonId
+                                ) ?? 0
+                            ) > 0
+                    );
+
+
             REASON_DEFINITIONS.forEach(
                 (definition) => {
 
@@ -2174,15 +2257,61 @@
                         ) ?? 0;
 
 
+                    /*
+                     * Подсветка выбранной причины.
+                     */
+
                     button.classList.toggle(
                         'vrh-reason--selected',
                         stacks > 0
                     );
 
 
+                    /*
+                     * =================================================
+                     * FLOOD / FLOOD SYMBOLS
+                     * =================================================
+                     *
+                     * Если выбрана хотя бы одна причина:
+                     *
+                     * Flood            -> disabled
+                     * Flood символами  -> disabled
+                     *
+                     * После Undo / Reset reasonStacks изменится,
+                     * afterStateChange() вызовет эту функцию снова,
+                     * и обе кнопки автоматически разблокируются.
+                     */
+
+                    if (
+                        FLOOD_REASON_IDS.has(
+                            definition.id
+                        )
+                    ) {
+
+                        button.disabled =
+                            floodSelected;
+
+
+                        button.classList.toggle(
+                            'vrh-reason--maxed',
+                            floodSelected
+                        );
+
+
+                        return;
+                    }
+
+
+                    /*
+                     * =================================================
+                     * GROUPED REASONS
+                     * =================================================
+                     */
+
                     if (
                         definition.group
                     ) {
+
                         const group =
                             PUNISHMENT_GROUPS[
                                 definition.group
@@ -2220,6 +2349,7 @@
                         if (
                             counter
                         ) {
+
                             counter.textContent =
                                 `×${stacks}`;
 
@@ -2234,6 +2364,12 @@
                         return;
                     }
 
+
+                    /*
+                     * =================================================
+                     * NORMAL NON-REPEATABLE REASONS
+                     * =================================================
+                     */
 
                     button.disabled =
                         (

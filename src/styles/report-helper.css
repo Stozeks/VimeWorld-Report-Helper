@@ -4147,3 +4147,137 @@
     right: 18px !important;
     bottom: 18px !important;
 }
+
+/* =========================================================
+   VRH — RESPONSIVE REASONS
+   Скролл причин на маленьких экранах + перенос длинных названий
+   ========================================================= */
+
+
+/* Сам блок причин */
+.vrh-reasons {
+    min-height: 0 !important;
+
+    /* Если места хватает — показываем всё как обычно */
+    max-height: none;
+
+    overflow-x: hidden !important;
+}
+
+
+/* =========================================================
+   ПЛИТКИ
+   ========================================================= */
+
+.vrh-reason {
+    box-sizing: border-box !important;
+
+    /* Плитка может стать выше, если название длинное */
+    height: auto !important;
+    min-height: 40px !important;
+
+    padding: 7px 11px !important;
+
+    align-items: center !important;
+}
+
+
+/* Иконка не сжимается */
+.vrh-reason__icon {
+    flex: 0 0 auto !important;
+}
+
+
+/* =========================================================
+   ТЕКСТ ПРИЧИНЫ
+   ========================================================= */
+
+.vrh-reason__label {
+    min-width: 0 !important;
+
+    /* УБИРАЕМ обрезание "...". */
+    overflow: visible !important;
+    text-overflow: clip !important;
+
+    /* Разрешаем 2–3 строки */
+    white-space: normal !important;
+
+    line-height: 1.18 !important;
+
+    /* Нормально переносим длинные слова */
+    overflow-wrap: break-word !important;
+    word-break: normal !important;
+
+    /* Максимум 3 строки */
+    display: -webkit-box !important;
+    -webkit-box-orient: vertical !important;
+    -webkit-line-clamp: 3;
+
+    line-clamp: 3;
+
+    font-size: 12px !important;
+}
+
+
+/* =========================================================
+   МАЛЕНЬКИЕ МОНИТОРЫ ПО ВЫСОТЕ
+   ========================================================= */
+
+@media (max-height: 900px) {
+
+    /*
+     * Причины получают собственный скролл.
+     * Верх панели и текстовые инструменты не исчезают.
+     */
+    .vrh-reasons {
+        max-height: 470px !important;
+
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+
+        padding-right: 5px !important;
+
+        scrollbar-width: thin;
+    }
+
+
+    .vrh-reason {
+        min-height: 42px !important;
+    }
+}
+
+
+/* =========================================================
+   ЕЩЁ БОЛЕЕ НИЗКИЕ МОНИТОРЫ / НОУТБУКИ
+   ========================================================= */
+
+@media (max-height: 760px) {
+
+    .vrh-reasons {
+        max-height: 360px !important;
+    }
+
+}
+
+
+/* =========================================================
+   СКРОЛЛБАР ПРИЧИН
+   ========================================================= */
+
+.vrh-reasons::-webkit-scrollbar {
+    width: 6px;
+}
+
+.vrh-reasons::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 10px;
+}
+
+.vrh-reasons::-webkit-scrollbar-thumb {
+    background: rgba(72, 156, 255, 0.42);
+    border-radius: 10px;
+}
+
+.vrh-reasons::-webkit-scrollbar-thumb:hover {
+    background: rgba(72, 156, 255, 0.65);
+}
