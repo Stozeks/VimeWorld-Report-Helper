@@ -2841,19 +2841,238 @@
             }
 
 
-            if (
-                this.panel.parentElement !==
-                modal
-            ) {
-                modal.appendChild(
+            /*
+             * Bootstrap-контейнер самого окна репорта.
+             */
+            const modalContent =
+                modal.querySelector(
+                    '.modal-content'
+                );
+
+
+            if (!modalContent) {
+                console.warn(
+                    '[VRH] .modal-content not found.'
+                );
+
+                return false;
+            }
+
+
+            /*
+             * Если layout уже существует —
+             * просто убеждаемся, что панель внутри него.
+             */
+            let layout =
+                modalContent.querySelector(
+                    ':scope > .vrh-integrated-layout'
+                );
+
+
+            if (!layout) {
+
+                layout =
+                    document.createElement(
+                        'div'
+                    );
+
+                layout.className =
+                    'vrh-integrated-layout';
+
+
+                const reportSide =
+                    document.createElement(
+                        'div'
+                    );
+
+                reportSide.className =
+                    'vrh-integrated-report';
+
+
+                const helperSide =
+                    document.createElement(
+                        'div'
+                    );
+
+                helperSide.className =
+                    'vrh-integrated-helper';
+
+
+                /*
+                 * Сохраняем все стандартные части
+                 * репорта VimeWorld.
+                 *
+                 * header
+                 * body
+                 * footer
+                 *
+                 * Ничего внутри них не меняем.
+                 */
+                const originalChildren =
+                    Array.from(
+                        modalContent.children
+                    );
+
+
+                originalChildren.forEach(
+                    (child) => {
+
+                        /*
+                         * VRH не переносим обратно
+                         * в левую часть.
+                         */
+                        if (
+                            child === this.panel
+                        ) {
+                            return;
+                        }
+
+
+                        /*
+                         * На всякий случай
+                         * не трогаем уже созданный layout.
+                         */
+                        if (
+                            child.classList?.contains(
+                                'vrh-integrated-layout'
+                            )
+                        ) {
+                            return;
+                        }
+
+
+                        reportSide.appendChild(
+                            child
+                        );
+                    }
+                );
+
+
+                helperSide.appendChild(
                     this.panel
                 );
+
+
+                layout.appendChild(
+                    reportSide
+                );
+
+
+                layout.appendChild(
+                    helperSide
+                );
+
+
+                modalContent.appendChild(
+                    layout
+                );
+            } else {
+
+                const helperSide =
+                    layout.querySelector(
+                        '.vrh-integrated-helper'
+                    );
+
+
+                if (
+                    helperSide &&
+                    this.panel.parentElement !==
+                    helperSide
+                ) {
+                    helperSide.appendChild(
+                        this.panel
+                    );
+                }
             }
+
+
+            modal.classList.add(
+                'vrh-report-integrated'
+            );
 
 
             return true;
         }
 
+
+        /* =====================================================
+           RESTORE REPORT MODAL
+           ===================================================== */
+
+        restoreReportModalLayout() {
+            const modal =
+                window
+                    .VimeReportDomAdapter
+                    ?.getReportModal?.();
+
+
+            if (!modal) {
+                return;
+            }
+
+
+            const modalContent =
+                modal.querySelector(
+                    '.modal-content'
+                );
+
+
+            if (!modalContent) {
+                return;
+            }
+
+
+            const layout =
+                modalContent.querySelector(
+                    ':scope > .vrh-integrated-layout'
+                );
+
+
+            if (!layout) {
+
+                modal.classList.remove(
+                    'vrh-report-integrated'
+                );
+
+                return;
+            }
+
+
+            const reportSide =
+                layout.querySelector(
+                    '.vrh-integrated-report'
+                );
+
+
+            /*
+             * Возвращаем оригинальные элементы
+             * VimeWorld обратно в modal-content.
+             */
+            if (reportSide) {
+
+                while (
+                    reportSide.firstChild
+                    ) {
+                    modalContent.insertBefore(
+                        reportSide.firstChild,
+                        layout
+                    );
+                }
+            }
+
+
+            layout.remove();
+
+
+            modal.classList.remove(
+                'vrh-report-integrated'
+            );
+        }
+
+
+        /* =====================================================
+           MOUNT TO BODY
+           ===================================================== */
 
         mountToBody() {
             if (
@@ -2861,6 +3080,13 @@
             ) {
                 return;
             }
+
+
+            /*
+             * Сначала восстанавливаем
+             * стандартную структуру VimeWorld.
+             */
+            this.restoreReportModalLayout();
 
 
             if (

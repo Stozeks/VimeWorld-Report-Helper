@@ -4149,69 +4149,97 @@
 }
 
 /* =========================================================
-   VRH — RESPONSIVE REASONS
-   Скролл причин на маленьких экранах + перенос длинных названий
+   VRH RESPONSIVE REASONS — FINAL
    ========================================================= */
 
-
-/* Сам блок причин */
+/*
+ * Блок причин:
+ * на больших экранах показывает всё,
+ * на маленьких получает собственный скролл.
+ */
 .vrh-reasons {
-    min-height: 0 !important;
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
 
-    /* Если места хватает — показываем всё как обычно */
-    max-height: none;
+    gap: 6px !important;
+
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
 
     overflow-x: hidden !important;
 }
 
 
 /* =========================================================
-   ПЛИТКИ
+   REASON TILE
    ========================================================= */
 
 .vrh-reason {
     box-sizing: border-box !important;
 
-    /* Плитка может стать выше, если название длинное */
+    width: 100% !important;
+
+    /*
+     * Не задаём жёсткий height.
+     * Плитка сама растёт под текст.
+     */
     height: auto !important;
-    min-height: 40px !important;
+    min-height: 42px !important;
 
-    padding: 7px 11px !important;
+    padding: 7px 10px !important;
 
+    display: flex !important;
     align-items: center !important;
+
+    gap: 8px !important;
+
+    overflow: hidden !important;
 }
 
 
-/* Иконка не сжимается */
+/*
+ * Иконка всегда остаётся своего размера
+ * и не сжимается длинным текстом.
+ */
 .vrh-reason__icon {
     flex: 0 0 auto !important;
 }
 
 
 /* =========================================================
-   ТЕКСТ ПРИЧИНЫ
+   REASON TEXT
    ========================================================= */
 
 .vrh-reason__label {
+    flex: 1 1 auto !important;
+
     min-width: 0 !important;
 
-    /* УБИРАЕМ обрезание "...". */
+    /*
+     * Самое важное:
+     * больше никаких "..."
+     */
+    white-space: normal !important;
+
     overflow: visible !important;
     text-overflow: clip !important;
 
-    /* Разрешаем 2–3 строки */
-    white-space: normal !important;
+    /*
+     * Нормальный перенос на 2–3 строки.
+     */
+    overflow-wrap: anywhere !important;
+    word-break: normal !important;
 
     line-height: 1.18 !important;
 
-    /* Нормально переносим длинные слова */
-    overflow-wrap: break-word !important;
-    word-break: normal !important;
-
-    /* Максимум 3 строки */
+    /*
+     * Длинная причина может занимать
+     * максимум 3 строки.
+     */
     display: -webkit-box !important;
     -webkit-box-orient: vertical !important;
-    -webkit-line-clamp: 3;
+    -webkit-line-clamp: 3 !important;
 
     line-clamp: 3;
 
@@ -4220,48 +4248,84 @@
 
 
 /* =========================================================
-   МАЛЕНЬКИЕ МОНИТОРЫ ПО ВЫСОТЕ
+   LARGE SCREENS
    ========================================================= */
 
-@media (max-height: 900px) {
+@media (min-height: 901px) {
 
-    /*
-     * Причины получают собственный скролл.
-     * Верх панели и текстовые инструменты не исчезают.
-     */
     .vrh-reasons {
-        max-height: 470px !important;
-
-        overflow-y: auto !important;
-        overflow-x: hidden !important;
-
-        padding-right: 5px !important;
-
-        scrollbar-width: thin;
+        max-height: none !important;
+        overflow-y: visible !important;
     }
 
-
-    .vrh-reason {
-        min-height: 42px !important;
-    }
 }
 
 
 /* =========================================================
-   ЕЩЁ БОЛЕЕ НИЗКИЕ МОНИТОРЫ / НОУТБУКИ
+   NORMAL / SMALL SCREENS
+   ========================================================= */
+
+@media (max-height: 900px) {
+
+    .vrh-reasons {
+        /*
+         * Вот здесь появляется НАСТОЯЩИЙ
+         * внутренний скролл причин.
+         */
+        max-height: calc(100vh - 430px) !important;
+
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+
+        padding-right: 6px !important;
+
+        overscroll-behavior: contain;
+
+        scrollbar-width: thin;
+    }
+
+}
+
+
+/* =========================================================
+   SMALL LAPTOPS
    ========================================================= */
 
 @media (max-height: 760px) {
 
     .vrh-reasons {
-        max-height: 360px !important;
+        max-height: calc(100vh - 390px) !important;
+    }
+
+    .vrh-reason {
+        min-height: 40px !important;
+
+        padding-top: 6px !important;
+        padding-bottom: 6px !important;
+    }
+
+    .vrh-reason__label {
+        font-size: 11px !important;
     }
 
 }
 
 
 /* =========================================================
-   СКРОЛЛБАР ПРИЧИН
+   VERY SMALL HEIGHT
+   ========================================================= */
+
+@media (max-height: 650px) {
+
+    .vrh-reasons {
+        max-height: 270px !important;
+    }
+
+}
+
+
+/* =========================================================
+   SCROLLBAR
    ========================================================= */
 
 .vrh-reasons::-webkit-scrollbar {
@@ -4269,15 +4333,920 @@
 }
 
 .vrh-reasons::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.03);
+    background: rgba(255, 255, 255, 0.025);
     border-radius: 10px;
 }
 
 .vrh-reasons::-webkit-scrollbar-thumb {
-    background: rgba(72, 156, 255, 0.42);
+    background: rgba(74, 158, 255, 0.42);
     border-radius: 10px;
 }
 
 .vrh-reasons::-webkit-scrollbar-thumb:hover {
-    background: rgba(72, 156, 255, 0.65);
+    background: rgba(74, 158, 255, 0.65);
+}
+
+/* =========================================================
+   VRH REASON TILES — CLEAN DESIGN
+   ========================================================= */
+
+
+/* ---------------------------------------------------------
+   CONTAINER
+   --------------------------------------------------------- */
+
+.vrh-reasons {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+
+    gap: 7px !important;
+
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+
+    padding: 2px !important;
+
+    overflow-x: hidden !important;
+}
+
+
+/* ---------------------------------------------------------
+   REMOVE ICONS / EMOJI
+   --------------------------------------------------------- */
+
+.vrh-reason__icon {
+    display: none !important;
+}
+
+
+/* ---------------------------------------------------------
+   STANDARD TILE
+   --------------------------------------------------------- */
+
+.vrh-reason {
+    position: relative !important;
+
+    box-sizing: border-box !important;
+
+    width: 100% !important;
+    height: auto !important;
+    min-height: 44px !important;
+
+    margin: 0 !important;
+    padding: 9px 12px !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+
+    gap: 0 !important;
+
+    border: 1px solid rgba(74, 126, 170, 0.34) !important;
+    border-radius: 9px !important;
+
+    background:
+            linear-gradient(
+                    180deg,
+                    rgba(21, 55, 82, 0.94) 0%,
+                    rgba(15, 43, 67, 0.94) 100%
+            ) !important;
+
+    color: #dce9f5 !important;
+
+    box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.025) !important;
+
+    cursor: pointer !important;
+
+    overflow: hidden !important;
+
+    transition:
+            background 0.15s ease,
+            border-color 0.15s ease,
+            transform 0.12s ease,
+            box-shadow 0.15s ease !important;
+}
+
+
+/* ---------------------------------------------------------
+   TEXT
+   --------------------------------------------------------- */
+
+.vrh-reason__label {
+    flex: 1 1 auto !important;
+
+    min-width: 0 !important;
+
+    margin: 0 !important;
+
+    color: inherit !important;
+
+    font-size: 12px !important;
+    font-weight: 600 !important;
+
+    line-height: 1.25 !important;
+
+    text-align: left !important;
+
+    white-space: normal !important;
+
+    overflow: visible !important;
+    text-overflow: clip !important;
+
+    overflow-wrap: anywhere !important;
+    word-break: normal !important;
+
+    display: -webkit-box !important;
+    -webkit-box-orient: vertical !important;
+    -webkit-line-clamp: 3 !important;
+
+    line-clamp: 3;
+}
+
+
+/* ---------------------------------------------------------
+   HOVER
+   --------------------------------------------------------- */
+
+.vrh-reason:not(:disabled):hover {
+    background:
+            linear-gradient(
+                    180deg,
+                    rgba(27, 70, 104, 0.98) 0%,
+                    rgba(18, 52, 80, 0.98) 100%
+            ) !important;
+
+    border-color: rgba(77, 157, 224, 0.68) !important;
+
+    box-shadow:
+            0 4px 14px rgba(0, 0, 0, 0.16),
+            inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
+
+    transform: translateY(-1px) !important;
+}
+
+
+/* ---------------------------------------------------------
+   SELECTED
+   --------------------------------------------------------- */
+
+.vrh-reason--selected {
+    background:
+            linear-gradient(
+                    180deg,
+                    rgba(27, 93, 136, 0.98) 0%,
+                    rgba(18, 66, 101, 0.98) 100%
+            ) !important;
+
+    border-color: rgba(83, 177, 244, 0.90) !important;
+
+    color: #ffffff !important;
+
+    box-shadow:
+            0 0 0 1px rgba(67, 157, 221, 0.18),
+            0 5px 16px rgba(0, 0, 0, 0.18) !important;
+}
+
+
+/* Маленькая полоска вместо эмодзи */
+.vrh-reason--selected::before {
+    content: '' !important;
+
+    position: absolute !important;
+
+    top: 8px !important;
+    bottom: 8px !important;
+    left: 0 !important;
+
+    width: 3px !important;
+
+    border-radius: 0 4px 4px 0 !important;
+
+    background: #54b9ff !important;
+}
+
+
+/* ---------------------------------------------------------
+   CRITICAL / BAN REQUIRED
+   --------------------------------------------------------- */
+
+.vrh-reason--critical {
+    background:
+            linear-gradient(
+                    180deg,
+                    rgba(91, 29, 39, 0.96) 0%,
+                    rgba(70, 22, 32, 0.96) 100%
+            ) !important;
+
+    border-color: rgba(195, 65, 82, 0.58) !important;
+
+    color: #f5dce1 !important;
+}
+
+
+.vrh-reason--critical:not(:disabled):hover {
+    background:
+            linear-gradient(
+                    180deg,
+                    rgba(111, 34, 47, 0.98) 0%,
+                    rgba(83, 25, 37, 0.98) 100%
+            ) !important;
+
+    border-color: rgba(232, 78, 99, 0.76) !important;
+}
+
+
+.vrh-reason--critical.vrh-reason--selected {
+    background:
+            linear-gradient(
+                    180deg,
+                    rgba(132, 38, 54, 1) 0%,
+                    rgba(96, 27, 41, 1) 100%
+            ) !important;
+
+    border-color: rgba(255, 91, 113, 0.92) !important;
+
+    color: #ffffff !important;
+}
+
+
+.vrh-reason--critical.vrh-reason--selected::before {
+    background: #ff6379 !important;
+}
+
+
+/* ---------------------------------------------------------
+   DISABLED
+   --------------------------------------------------------- */
+
+.vrh-reason:disabled {
+    opacity: 0.43 !important;
+
+    cursor: default !important;
+
+    transform: none !important;
+
+    box-shadow: none !important;
+}
+
+
+/* ---------------------------------------------------------
+   STACK COUNTER
+   --------------------------------------------------------- */
+
+.vrh-reason__counter {
+    flex: 0 0 auto !important;
+
+    margin-left: 8px !important;
+
+    min-width: 22px !important;
+
+    padding: 2px 6px !important;
+
+    border-radius: 6px !important;
+
+    background: rgba(5, 18, 30, 0.45) !important;
+
+    color: #8fcfff !important;
+
+    font-size: 10px !important;
+    font-weight: 700 !important;
+
+    text-align: center !important;
+}
+
+
+.vrh-reason__counter--empty {
+    opacity: 0.42 !important;
+}
+
+
+/* =========================================================
+   RESPONSIVE HEIGHT / SCROLL
+   ========================================================= */
+
+
+/*
+ * На большом мониторе никаких ограничений.
+ */
+@media (min-height: 901px) {
+
+    .vrh-reasons {
+        max-height: none !important;
+
+        overflow-y: visible !important;
+    }
+
+}
+
+
+/*
+ * На обычных/маленьких мониторах
+ * причины получают собственный скролл.
+ */
+@media (max-height: 900px) {
+
+    .vrh-reasons {
+        max-height: calc(100vh - 420px) !important;
+
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+
+        padding-right: 6px !important;
+
+        overscroll-behavior: contain !important;
+
+        scrollbar-width: thin;
+    }
+
+}
+
+
+/*
+ * Низкие ноутбучные экраны.
+ */
+@media (max-height: 760px) {
+
+    .vrh-reasons {
+        max-height: calc(100vh - 370px) !important;
+    }
+
+
+    .vrh-reason {
+        min-height: 42px !important;
+
+        padding: 7px 10px !important;
+    }
+
+
+    .vrh-reason__label {
+        font-size: 11px !important;
+    }
+
+}
+
+
+/* =========================================================
+   RESPONSIVE WIDTH
+   ========================================================= */
+
+
+/*
+ * Если сама панель становится узкой —
+ * переходим с 3 колонок на 2.
+ */
+@media (max-width: 700px) {
+
+    .vrh-reasons {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr)) !important;
+    }
+
+}
+
+
+/* =========================================================
+   SCROLLBAR
+   ========================================================= */
+
+.vrh-reasons::-webkit-scrollbar {
+    width: 6px !important;
+}
+
+
+.vrh-reasons::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.025) !important;
+
+    border-radius: 10px !important;
+}
+
+
+.vrh-reasons::-webkit-scrollbar-thumb {
+    background: rgba(83, 143, 190, 0.48) !important;
+
+    border-radius: 10px !important;
+}
+
+
+.vrh-reasons::-webkit-scrollbar-thumb:hover {
+    background: rgba(91, 169, 228, 0.70) !important;
+}
+
+/* =========================================================
+   FINAL TILE COLORS
+   ========================================================= */
+
+.vrh-reason {
+    border: 1px solid rgba(72, 105, 132, 0.38) !important;
+
+    background:
+            linear-gradient(
+                    180deg,
+                    rgba(25, 39, 52, 0.98) 0%,
+                    rgba(18, 31, 43, 0.98) 100%
+            ) !important;
+
+    color: #dce7f0 !important;
+}
+
+
+.vrh-reason:not(:disabled):hover {
+    background:
+            linear-gradient(
+                    180deg,
+                    rgba(29, 61, 84, 0.98) 0%,
+                    rgba(21, 47, 66, 0.98) 100%
+            ) !important;
+
+    border-color: rgba(72, 157, 219, 0.72) !important;
+}
+
+
+.vrh-reason--selected {
+    background:
+            linear-gradient(
+                    180deg,
+                    rgba(25, 91, 137, 1) 0%,
+                    rgba(18, 65, 101, 1) 100%
+            ) !important;
+
+    border-color: rgba(78, 177, 245, 0.92) !important;
+
+    color: #ffffff !important;
+}
+
+/* =========================================================
+   CRITICAL REASONS — DARK RED
+   ========================================================= */
+
+.vrh-reason--critical {
+    background:
+            linear-gradient(
+                    180deg,
+                    rgba(78, 31, 39, 0.98) 0%,
+                    rgba(60, 23, 31, 0.98) 100%
+            ) !important;
+
+    border-color: rgba(166, 66, 82, 0.55) !important;
+
+    color: #f0d9dd !important;
+}
+
+
+/* Наведение */
+.vrh-reason--critical:not(:disabled):hover {
+    background:
+            linear-gradient(
+                    180deg,
+                    rgba(99, 35, 46, 0.98) 0%,
+                    rgba(76, 26, 36, 0.98) 100%
+            ) !important;
+
+    border-color: rgba(211, 76, 96, 0.75) !important;
+
+    color: #ffffff !important;
+}
+
+
+/* Выбранная критическая причина */
+.vrh-reason--critical.vrh-reason--selected {
+    background:
+            linear-gradient(
+                    180deg,
+                    rgba(133, 39, 55, 1) 0%,
+                    rgba(101, 28, 42, 1) 100%
+            ) !important;
+
+    border-color: rgba(241, 83, 106, 0.92) !important;
+
+    color: #ffffff !important;
+}
+
+
+/* Красная полоска у выбранной */
+.vrh-reason--critical.vrh-reason--selected::before {
+    background: #f05b70 !important;
+}
+/* =========================================================
+   VRH + VIMEWORLD REPORT
+   FINAL INTEGRATED MODE
+   ========================================================= */
+
+
+/* ---------------------------------------------------------
+   MODAL SIZE
+   --------------------------------------------------------- */
+
+#view_report.vrh-report-integrated .modal-dialog {
+    width: min(1380px, calc(100vw - 48px)) !important;
+    max-width: none !important;
+
+    margin: 28px auto !important;
+}
+
+
+/* ---------------------------------------------------------
+   MAIN SHELL
+   --------------------------------------------------------- */
+
+#view_report.vrh-report-integrated .modal-content {
+    overflow: hidden !important;
+
+    border:
+            1px solid rgba(64, 112, 148, 0.34) !important;
+
+    border-radius: 14px !important;
+
+    background:
+            linear-gradient(
+                    180deg,
+                    rgba(7, 20, 32, 0.985) 0%,
+                    rgba(5, 16, 27, 0.985) 100%
+            ) !important;
+
+    box-shadow:
+            0 22px 60px rgba(0, 0, 0, 0.42) !important;
+}
+
+
+/* ---------------------------------------------------------
+   TWO COLUMN LAYOUT
+   --------------------------------------------------------- */
+
+.vrh-integrated-layout {
+    display: grid !important;
+
+    grid-template-columns:
+        minmax(0, 1.35fr)
+        minmax(500px, 0.95fr) !important;
+
+    width: 100% !important;
+
+    min-width: 0 !important;
+
+    align-items: stretch !important;
+}
+
+
+/* =========================================================
+   LEFT SIDE — VIMEWORLD REPORT
+   ========================================================= */
+
+.vrh-integrated-report {
+    min-width: 0 !important;
+
+    background:
+            rgba(5, 17, 28, 0.48) !important;
+
+    border-right:
+            1px solid rgba(67, 112, 148, 0.23) !important;
+}
+
+
+/* Убираем лишний визуальный разрыв */
+.vrh-integrated-report .modal-header {
+    min-height: 64px !important;
+
+    display: flex !important;
+    align-items: center !important;
+
+    padding:
+            16px 22px !important;
+
+    border-bottom:
+            1px solid rgba(70, 116, 150, 0.20) !important;
+
+    background:
+            rgba(8, 26, 42, 0.55) !important;
+}
+
+
+/* Заголовок репорта */
+.vrh-integrated-report .modal-title {
+    margin: 0 !important;
+
+    font-size: 20px !important;
+    font-weight: 650 !important;
+
+    color: #edf5fb !important;
+}
+
+
+/* Основное содержимое */
+.vrh-integrated-report .modal-body {
+    padding:
+            18px 22px 20px !important;
+
+    box-sizing: border-box !important;
+}
+
+
+/*
+ * Убираем ощущение огромной пустой левой панели.
+ * Высота определяется содержимым репорта.
+ */
+.vrh-integrated-report {
+    align-self: start !important;
+}
+
+
+/* Footer VimeWorld */
+.vrh-integrated-report .modal-footer {
+    padding:
+            14px 22px !important;
+
+    border-top:
+            1px solid rgba(70, 116, 150, 0.18) !important;
+
+    background:
+            rgba(5, 16, 26, 0.72) !important;
+}
+
+
+/* =========================================================
+   RIGHT SIDE — REPORT HELPER
+   ========================================================= */
+
+.vrh-integrated-helper {
+    min-width: 0 !important;
+
+    background:
+            linear-gradient(
+                    180deg,
+                    rgba(7, 25, 40, 0.96) 0%,
+                    rgba(5, 19, 31, 0.98) 100%
+            ) !important;
+
+    overflow: hidden !important;
+}
+
+
+/*
+ * Панель перестаёт быть отдельным окном.
+ */
+.vrh-integrated-helper .vrh-panel {
+    position: relative !important;
+
+    inset: auto !important;
+
+    width: 100% !important;
+    height: auto !important;
+
+    max-width: none !important;
+    max-height: none !important;
+
+    margin: 0 !important;
+
+    border: 0 !important;
+    border-radius: 0 !important;
+
+    box-shadow: none !important;
+
+    transform: none !important;
+
+    background: transparent !important;
+}
+
+
+/* ---------------------------------------------------------
+   HELPER HEADER
+   --------------------------------------------------------- */
+
+.vrh-integrated-helper .vrh-panel__header {
+    min-height: 64px !important;
+
+    padding:
+            14px 18px !important;
+
+    display: flex !important;
+    align-items: center !important;
+
+    border-bottom:
+            1px solid rgba(70, 116, 150, 0.20) !important;
+
+    background:
+            rgba(8, 26, 42, 0.52) !important;
+}
+
+
+/* Чуть компактнее название */
+.vrh-integrated-helper .vrh-panel__brand {
+    font-size: 18px !important;
+    font-weight: 700 !important;
+}
+
+
+/*
+ * Встроенный Helper не нуждается
+ * в отдельной кнопке закрытия.
+ */
+.vrh-integrated-helper #vrh-panel-close {
+    display: none !important;
+}
+
+
+/* ---------------------------------------------------------
+   HELPER BODY SPACING
+   --------------------------------------------------------- */
+
+.vrh-integrated-helper .vrh-report-info {
+    margin:
+            14px 14px 8px !important;
+}
+
+
+.vrh-integrated-helper .vrh-punishment-controls {
+    margin:
+            0 14px !important;
+}
+
+
+.vrh-integrated-helper .vrh-punishment-summary {
+    margin:
+            6px 14px 0 !important;
+}
+
+
+.vrh-integrated-helper .vrh-report-scanner {
+    margin:
+            10px 14px 8px !important;
+}
+
+
+/* =========================================================
+   REASON GRID
+   ========================================================= */
+
+.vrh-integrated-helper .vrh-reasons {
+    display: grid !important;
+
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr)) !important;
+
+    gap: 7px !important;
+
+    margin:
+            10px 14px 0 !important;
+
+    padding:
+            0 4px 4px 0 !important;
+
+    max-height:
+            min(540px, calc(100vh - 390px)) !important;
+
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+
+    scrollbar-width: thin;
+}
+
+
+/* Плитки чуть компактнее именно во встроенном режиме */
+.vrh-integrated-helper .vrh-reason {
+    min-height: 42px !important;
+
+    padding:
+            8px 10px !important;
+}
+
+
+/* =========================================================
+   TEXT TOOLS
+   ========================================================= */
+
+.vrh-integrated-helper .vrh-text-tools {
+    margin:
+            10px 14px 0 !important;
+
+    padding-top:
+            10px !important;
+
+    border-top:
+            1px solid rgba(70, 116, 150, 0.15) !important;
+}
+
+
+/* =========================================================
+   HELPER FOOTER
+   ========================================================= */
+
+.vrh-integrated-helper .vrh-panel__footer {
+    margin-top:
+            10px !important;
+
+    padding:
+            10px 14px !important;
+
+    border-top:
+            1px solid rgba(70, 116, 150, 0.14) !important;
+
+    background:
+            rgba(4, 15, 25, 0.56) !important;
+}
+
+
+/* =========================================================
+   SCROLLBAR
+   ========================================================= */
+
+.vrh-integrated-helper
+.vrh-reasons::-webkit-scrollbar {
+    width: 6px !important;
+}
+
+
+.vrh-integrated-helper
+.vrh-reasons::-webkit-scrollbar-track {
+    background:
+            rgba(255, 255, 255, 0.025) !important;
+
+    border-radius: 10px !important;
+}
+
+
+.vrh-integrated-helper
+.vrh-reasons::-webkit-scrollbar-thumb {
+    background:
+            rgba(79, 135, 177, 0.50) !important;
+
+    border-radius: 10px !important;
+}
+
+
+/* =========================================================
+   MEDIUM MONITORS
+   ========================================================= */
+
+@media (max-width: 1280px) {
+
+    #view_report.vrh-report-integrated
+    .modal-dialog {
+        width:
+                calc(100vw - 28px) !important;
+    }
+
+
+    .vrh-integrated-layout {
+        grid-template-columns:
+            minmax(0, 1.15fr)
+            minmax(450px, 0.95fr) !important;
+    }
+
+
+    .vrh-integrated-helper
+    .vrh-reasons {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+
+
+/* =========================================================
+   SMALL WIDTH
+   ========================================================= */
+
+@media (max-width: 950px) {
+
+    .vrh-integrated-layout {
+        display: block !important;
+    }
+
+
+    .vrh-integrated-report {
+        border-right: 0 !important;
+
+        border-bottom:
+                1px solid rgba(67, 112, 148, 0.23) !important;
+    }
+
+
+    .vrh-integrated-helper
+    .vrh-reasons {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr)) !important;
+
+        max-height: 420px !important;
+    }
+}
+
+
+/* =========================================================
+   LOW HEIGHT
+   ========================================================= */
+
+@media (max-height: 820px) {
+
+    #view_report.vrh-report-integrated
+    .modal-dialog {
+        margin:
+                12px auto !important;
+    }
+
+
+    .vrh-integrated-helper
+    .vrh-reasons {
+        max-height:
+                calc(100vh - 360px) !important;
+    }
 }
