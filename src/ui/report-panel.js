@@ -904,24 +904,47 @@
                      REPORT SCANNER
                      ================================================= -->
 
-                <div class="vrh-report-scanner">
-
-                    <button
-                        id="vrh-scan-report"
-                        class="vrh-action vrh-action--scan"
-                        type="button"
-                    >
-                        Сканировать репорт
-                    </button>
-
-
-                    <span
-                        id="vrh-scan-result"
-                        class="vrh-scan-result"
-                    >
-                        Сканирование не запускалось
-                    </span>
-
+                                <div class="vrh-report-scanners">
+                
+                    <div class="vrh-report-scanner">
+                
+                        <button
+                            id="vrh-scan-report"
+                            class="vrh-action vrh-action--scan"
+                            type="button"
+                        >
+                            Скан нарушений
+                        </button>
+                
+                        <span
+                            id="vrh-scan-result"
+                            class="vrh-scan-result"
+                        >
+                            Не запускался
+                        </span>
+                
+                    </div>
+                
+                
+                    <div class="vrh-report-scanner">
+                
+                        <button
+                            id="vrh-scan-flood"
+                            class="vrh-action vrh-action--scan vrh-action--scan-flood"
+                            type="button"
+                        >
+                            Скан Flood
+                        </button>
+                
+                        <span
+                            id="vrh-flood-result"
+                            class="vrh-scan-result vrh-flood-result"
+                        >
+                            Не запускался
+                        </span>
+                
+                    </div>
+                
                 </div>
 
 
@@ -1067,6 +1090,18 @@
                     button.className =
                         `vrh-reason vrh-reason--${definition.severity}`;
 
+                    /*
+ * Короткие причины делаем компактными.
+ * Длинные сохраняют нормальную высоту
+ * и могут занимать несколько строк.
+ */
+                    if (
+                        definition.label.length <= 18
+                    ) {
+                        button.classList.add(
+                            'vrh-reason--compact'
+                        );
+                    }
                     button.dataset.reasonId =
                         definition.id;
 
@@ -1161,6 +1196,17 @@
                     }
                 );
 
+            this.panel
+                ?.querySelector(
+                    '#vrh-scan-flood'
+                )
+                ?.addEventListener(
+                    'click',
+                    () => {
+                        this.runFloodScan();
+                    }
+                );
+
 
             this.panel
                 ?.querySelector(
@@ -1200,6 +1246,17 @@
                     'click',
                     () => {
                         this.runReportScan();
+                    }
+                );
+
+            this.panel
+                ?.querySelector(
+                    '#vrh-scan-flood'
+                )
+                ?.addEventListener(
+                    'click',
+                    () => {
+                        this.runFloodScan();
                     }
                 );
 
@@ -1355,6 +1412,7 @@
                 this.renderScanResult(
                     this.lastScanResults
                 );
+                this.updateCapsRecommendation();
 
             } catch (error) {
                 console.error(
@@ -1376,6 +1434,190 @@
                         'Сканировать репорт';
                 }
             }
+        }
+
+        runFloodScan() {
+            const resultElement =
+                this.panel?.querySelector(
+                    '#vrh-flood-result'
+                );
+
+
+            const scanButton =
+                this.panel?.querySelector(
+                    '#vrh-scan-flood'
+                );
+
+
+            if (
+                this.mode !==
+                'report'
+            ) {
+                if (resultElement) {
+                    resultElement.textContent =
+                        'Сначала открой репорт';
+                }
+
+                return;
+            }
+
+
+            if (
+                !window
+                    .VimeReportDomAdapter
+                    ?.isReportOpen?.()
+            ) {
+                if (resultElement) {
+                    resultElement.textContent =
+                        'Репорт не открыт';
+                }
+
+                return;
+            }
+
+
+            const scanner =
+                window.VimeReportFloodScanner;
+
+
+            if (
+                !scanner ||
+                typeof scanner.scan !==
+                'function'
+            ) {
+                if (resultElement) {
+                    resultElement.textContent =
+                        'Flood Scanner недоступен';
+                }
+
+                return;
+            }
+
+
+            if (scanButton) {
+                scanButton.disabled =
+                    true;
+
+                scanButton.textContent =
+                    'Сканирование...';
+            }
+
+
+            try {
+                const result =
+                    scanner.scan();
+
+
+                this.renderFloodScanResult(
+                    result
+                );
+
+            } catch (error) {
+
+                console.error(
+                    '[Vime Report Helper] Flood scan failed:',
+                    error
+                );
+
+
+                if (resultElement) {
+                    resultElement.textContent =
+                        'Ошибка сканирования';
+                }
+
+            } finally {
+
+                if (scanButton) {
+                    scanButton.disabled =
+                        false;
+
+                    scanButton.textContent =
+                        'Скан Flood';
+                }
+            }
+        }
+
+        renderFloodScanResult(
+            result
+        ) {
+            const element =
+                this.panel?.querySelector(
+                    '#vrh-flood-result'
+                );
+
+
+            if (!element) {
+                return;
+            }
+
+
+            element.classList.remove(
+                'vrh-scan-result--clean',
+                'vrh-scan-result--warning'
+            );
+
+
+            if (
+                !result ||
+                !result.detected
+            ) {
+                const symbolCount =
+                    result
+                        ?.symbolFlood
+                        ?.totalSymbols ??
+                    0;
+
+
+                const repeatCount =
+                    result
+                        ?.repeatedFlood
+                        ?.count ??
+                    0;
+
+
+                element.textContent =
+                    `Чисто • Симв. ${symbolCount}/14 • Повтор ${repeatCount}/3`;
+
+
+                element.classList.add(
+                    'vrh-scan-result--clean'
+                );
+
+
+                return;
+            }
+
+
+            const parts = [];
+
+
+            if (
+                result.symbolFlood
+                    ?.detected
+            ) {
+                parts.push(
+                    `Симв. ${result.symbolFlood.totalSymbols}/14`
+                );
+            }
+
+
+            if (
+                result.repeatedFlood
+                    ?.detected
+            ) {
+                parts.push(
+                    `Повтор ${result.repeatedFlood.count}/3`
+                );
+            }
+
+
+            element.textContent =
+                `Обнаружено • ${parts.join(' • ')}`;
+
+
+            element.classList.add(
+                'vrh-scan-result--warning'
+            );
         }
 
 
@@ -1483,6 +1725,54 @@
                     }
                 );
         }
+
+        updateCapsRecommendation() {
+            const scanner =
+                window.VimeReportViolationScanner;
+
+
+            const result =
+                scanner
+                    ?.getLastCapsLock?.();
+
+
+            const button =
+                this.panel?.querySelector(
+                    '[data-reason-id="caps-lock"]'
+                );
+
+
+            if (!button) {
+                return;
+            }
+
+
+            button.classList.remove(
+                'vrh-reason--recommended'
+            );
+
+
+            button.removeAttribute(
+                'title'
+            );
+
+
+            if (
+                !result?.detected
+            ) {
+                return;
+            }
+
+
+            button.classList.add(
+                'vrh-reason--recommended'
+            );
+
+
+            button.title =
+                `Caps Lock: ${result.count}/${result.requiredCount} слов за 5 минут`;
+        }
+
 
         toggleScanDetails(results) {
             const existing =
@@ -1798,6 +2088,34 @@
                 );
             }
 
+            const floodElement =
+                this.panel?.querySelector(
+                    '#vrh-flood-result'
+                );
+
+
+            if (floodElement) {
+                floodElement.textContent =
+                    'Не запускался';
+
+                floodElement.classList.remove(
+                    'vrh-scan-result--clean',
+                    'vrh-scan-result--warning'
+                );
+            }
+
+
+            const floodButton =
+                this.panel?.querySelector(
+                    '#vrh-scan-flood'
+                );
+
+
+            if (floodButton) {
+                floodButton.disabled =
+                    this.mode !==
+                    'report';
+            }
 
             const button =
                 this.panel?.querySelector(
@@ -2816,6 +3134,10 @@
 
             window
                 .VimeReportViolationScanner
+                ?.clear?.();
+
+            window
+                .VimeReportFloodScanner
                 ?.clear?.();
 
             this.afterStateChange();

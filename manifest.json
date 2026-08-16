@@ -12,20 +12,34 @@
         "https://legacy-cp.vimeworld.com/moder/reports*"
       ],
       "js": [
-        "src/core/dom-adapter.js",
-        "src/features/message-parser.js",
         "src/data/prohibited-words.js",
         "src/data/violation-rules.js",
+        "src/data/prohibited-roots.js",
+        "src/data/scanner-exceptions.js",
+        "src/data/relative-context-rules.js",
+        "src/data/relative-abuse-rules.js",
+
+        "src/core/dom-adapter.js",
+
+        "src/features/message-parser.js",
+        "src/features/relative-context-detector.js",
+        "src/features/relative-abuse-detector.js",
         "src/features/violation-scanner.js",
+        "src/features/relative-abuse-highlighter.js",
+        "src/features/relative-abuse-integration.js",
+        "src/features/flood-scanner.js",
         "src/features/monthly-stats.js",
-        "src/ui/report-panel.js",
-        "src/ui/stats-panel.js",
         "src/features/reason-undo.js",
+
+        "src/ui/stats-panel.js",
+        "src/ui/report-panel.js",
+
         "src/content.js"
       ],
       "css": [
         "src/styles/vimeworld-theme.css",
-        "src/styles/report-helper.css"
+        "src/styles/report-helper.css",
+        "src/styles/relative-context.css"
       ],
       "run_at": "document_idle"
     }
