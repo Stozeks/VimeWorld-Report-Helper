@@ -7,6 +7,46 @@
             this.lastResults = [];
             this.lastRecommendations = [];
             this.lastCapsLock = null;
+
+            /*
+             * Descriptors built during scan() for the
+             * unified highlighter.  Populated even when
+             * _relativeAbuseIntegrationActive is true so the
+             * integration wrapper can read them.
+             */
+            this._lastViolationDescriptors = [];
+
+            /*
+             * Set to true by VimeReportRelativeAbuseIntegration
+             * once it wraps scan().  When true, scan() does NOT
+             * call the unified highlighter itself; the integration
+             * wrapper applies all descriptors (violation + relative)
+             * in a single pass.
+             */
+            this._relativeAbuseIntegrationActive = false;
+
+            /*
+             * Кэш скомпилированных bypass-регулярных выражений.
+             *
+             * Кэшируются ТОЛЬКО bypass-паттерны (buildBypassRegex).
+             * Они строятся посимвольно через getBypassCharacterPattern
+             * и компилируют сложный NFA — дорогая операция.
+             *
+             * Простые word/root-выражения (buildRegex) НЕ кэшируются:
+             * они сводятся к escapeRegExp + шаблону и пересоздаются
+             * мгновенно; хранить их нет смысла.
+             *
+             * Все bypass-regex хранятся как /gi (global+case-insensitive).
+             * lastIndex сбрасывается в 0 перед каждым возвратом из кэша,
+             * поэтому один объект безопасно использовать как для
+             * одиночного exec() (scanMessage), так и для цикла while
+             * (findTextMatches).
+             *
+             * Кэш заполняется при первом скане и стабилизируется:
+             * максимум ~3052 записей (одна на слово словаря).
+             * Повторные сканы дают только cache hit — память не растёт.
+             */
+            this._regexCache = new Map();
         }
 
 
@@ -174,6 +214,27 @@
             }
 
 
+            /* --- Кэш bypass-паттернов: один объект на слово, всегда /gi --- */
+
+            const cacheKey =
+                `bypass:${cleaned}`;
+
+            const cached = this._regexCache.get(cacheKey);
+
+            if (cached !== undefined) {
+                /*
+                 * Сбрасываем lastIndex перед каждым возвратом.
+                 * Это безопасно в однопоточном JS:
+                 *   - scanMessage вызывает exec() один раз и завершает итерацию
+                 *   - findTextMatches исчерпывает цикл while до null → lastIndex=0
+                 * В обоих случаях следующий вызов buildBypassRegex для
+                 * этого же слова вернёт объект уже с lastIndex=0.
+                 */
+                cached.lastIndex = 0;
+                return cached;
+            }
+
+
             /*
              * Между буквами разрешаем:
              *
@@ -278,12 +339,6 @@
                 parts.join('');
 
 
-            const flags =
-                global
-                    ? 'gi'
-                    : 'i';
-
-
             /*
              * Сохраняем защиту границ слова.
              *
@@ -294,11 +349,19 @@
              * ххееер     -> YES
              *
              * Херобрин   -> NO
+             *
+             * Всегда компилируем с флагом /gi:
+             * один объект покрывает оба сценария использования
+             * (одиночный exec и цикл while).
              */
-            return new RegExp(
+            const builtRegex = new RegExp(
                 `(^|[^a-zа-яё0-9_])(${pattern})(?=$|[^a-zа-яё0-9_])`,
-                flags
+                'gi'
             );
+
+            this._regexCache.set(cacheKey, builtRegex);
+
+            return builtRegex;
         }
 
         timeToSeconds(
@@ -555,272 +618,66 @@
             return best;
         }
 
-        highlightCapsLock(
-            result
+        /* =====================================================
+           BUILD CAPS DESCRIPTORS
+           =====================================================
+           Converts scanCapsLock() result into highlight
+           descriptors for the unified highlighter.
+           No DOM changes here.
+           ===================================================== */
+
+        _buildCapsDescriptors(
+            capsResult
         ) {
             if (
-                !result?.detected ||
-                !Array.isArray(result.matches)
+                !capsResult?.detected ||
+                !Array.isArray(
+                    capsResult.matches
+                )
             ) {
-                return;
+                return [];
             }
 
+            const HL =
+                window
+                    .VimeReportUnifiedHighlighter;
 
-            const container =
-                document.querySelector(
-                    '#mr_messages'
-                );
+            const cssClass =
+                HL?.CSS_CLASSES?.CAPS ??
+                'vrh-hl-caps';
 
-
-            if (!container) {
-                return;
-            }
-
-
-            /*
-             * Группируем найденные Caps-слова
-             * по полному тексту сообщения.
-             */
-            const byMessage =
-                new Map();
+            const priority =
+                HL?.PRIORITY?.CAPS ??
+                30;
 
 
-            result.matches.forEach(
-                (match) => {
+            return capsResult.matches
+                .filter(
+                    (match) =>
+                        typeof match.messageIndex ===
+                        'number' &&
+                        typeof match.index ===
+                        'number' &&
+                        typeof match.length ===
+                        'number'
+                )
+                .map(
+                    (match) => ({
+                        messageIndex:
+                            match.messageIndex,
 
-                    if (
-                        !match?.text ||
-                        typeof match.index !== 'number' ||
-                        typeof match.length !== 'number'
-                    ) {
-                        return;
-                    }
-
-
-                    if (
-                        !byMessage.has(
-                            match.text
-                        )
-                    ) {
-                        byMessage.set(
-                            match.text,
-                            []
-                        );
-                    }
-
-
-                    byMessage
-                        .get(
-                            match.text
-                        )
-                        .push({
-                            index:
+                        start:
                             match.index,
 
-                            length:
+                        end:
+                            match.index +
                             match.length,
 
-                            text:
-                            match.word
-                        });
-                }
-            );
+                        cssClass,
 
-
-            const walker =
-                document.createTreeWalker(
-                    container,
-                    NodeFilter.SHOW_TEXT
+                        priority
+                    })
                 );
-
-
-            const nodes = [];
-
-            let node;
-
-
-            while (
-                (
-                    node =
-                        walker.nextNode()
-                )
-                ) {
-                if (
-                    node.parentElement?.closest(
-                        '.vrh-violation-highlight, ' +
-                        '.vrh-flood-highlight, ' +
-                        '.vrh-caps-highlight'
-                    )
-                ) {
-                    continue;
-                }
-
-
-                nodes.push(
-                    node
-                );
-            }
-
-
-            nodes.forEach(
-                (textNode) => {
-
-                    const fullText =
-                        textNode.nodeValue;
-
-
-                    if (!fullText) {
-                        return;
-                    }
-
-
-                    for (
-                        const [
-                            messageText,
-                            capsMatches
-                        ]
-                        of byMessage
-                        ) {
-
-                        const messageOffset =
-                            fullText.indexOf(
-                                messageText
-                            );
-
-
-                        if (
-                            messageOffset === -1
-                        ) {
-                            continue;
-                        }
-
-
-                        const adjusted =
-                            capsMatches
-                                .map(
-                                    (match) => ({
-                                        ...match,
-
-                                        index:
-                                            messageOffset +
-                                            match.index
-                                    })
-                                )
-                                .sort(
-                                    (a, b) =>
-                                        a.index -
-                                        b.index
-                                );
-
-
-                        this.highlightCapsTextNode(
-                            textNode,
-                            adjusted
-                        );
-
-
-                        break;
-                    }
-                }
-            );
-        }
-
-        highlightCapsTextNode(
-            textNode,
-            matches
-        ) {
-            const originalText =
-                textNode.nodeValue;
-
-
-            if (
-                !originalText ||
-                !matches.length
-            ) {
-                return;
-            }
-
-
-            const fragment =
-                document.createDocumentFragment();
-
-
-            let position = 0;
-
-
-            matches.forEach(
-                (match) => {
-
-                    if (
-                        match.index <
-                        position
-                    ) {
-                        return;
-                    }
-
-
-                    if (
-                        match.index >
-                        position
-                    ) {
-                        fragment.appendChild(
-                            document.createTextNode(
-                                originalText.slice(
-                                    position,
-                                    match.index
-                                )
-                            )
-                        );
-                    }
-
-
-                    const mark =
-                        document.createElement(
-                            'mark'
-                        );
-
-
-                    mark.className =
-                        'vrh-caps-highlight';
-
-
-                    mark.textContent =
-                        originalText.slice(
-                            match.index,
-                            match.index +
-                            match.length
-                        );
-
-
-                    fragment.appendChild(
-                        mark
-                    );
-
-
-                    position =
-                        match.index +
-                        match.length;
-                }
-            );
-
-
-            if (
-                position <
-                originalText.length
-            ) {
-                fragment.appendChild(
-                    document.createTextNode(
-                        originalText.slice(
-                            position
-                        )
-                    )
-                );
-            }
-
-
-            textNode.replaceWith(
-                fragment
-            );
         }
 
         /*
@@ -1215,86 +1072,740 @@
            ===================================================== */
 
         clearHighlights() {
-            const container =
-                document.querySelector(
-                    '#mr_messages'
+            window
+                .VimeReportUnifiedHighlighter
+                ?.clear?.();
+        }
+
+
+        /* =====================================================
+           BUILD VIOLATION DESCRIPTORS
+           =====================================================
+           For each message that has at least one violation,
+           finds ALL match positions in message.text using
+           findTextMatches() and returns highlight descriptors.
+           No DOM changes.
+           ===================================================== */
+
+        _buildViolationDescriptors(
+            messages,
+            prohibitedWords
+        ) {
+            if (
+                !messages.length ||
+                !prohibitedWords.length ||
+                !this.lastResults.length
+            ) {
+                return [];
+            }
+
+            const HL =
+                window
+                    .VimeReportUnifiedHighlighter;
+
+            const cssClass =
+                HL?.CSS_CLASSES?.VIOLATION ??
+                'vrh-hl-violation';
+
+            const priority =
+                HL?.PRIORITY?.VIOLATION ??
+                40;
+
+            /*
+             * Only scan messages that actually had a violation.
+             */
+            const violatingIndexes =
+                new Set(
+                    this.lastResults.map(
+                        (r) => r.messageIndex
+                    )
                 );
 
+            const allWords = [
+                ...new Set(
+                    prohibitedWords.map(
+                        (e) =>
+                            typeof e === 'string'
+                                ? e
+                                : e?.word
+                    ).filter(Boolean)
+                )
+            ];
 
-            if (!container) {
-                return;
+            const descriptors = [];
+
+            messages.forEach(
+                (message) => {
+                    if (
+                        !violatingIndexes.has(
+                            message.index
+                        )
+                    ) {
+                        return;
+                    }
+
+                    const matches =
+                        this.findTextMatches(
+                            message.text,
+                            allWords
+                        );
+
+                    matches.forEach(
+                        (match) => {
+                            descriptors.push({
+                                messageIndex:
+                                    message.index,
+
+                                start:
+                                    match.index,
+
+                                end:
+                                    match.index +
+                                    match.length,
+
+                                cssClass,
+
+                                priority
+                            });
+                        }
+                    );
+                }
+            );
+
+            return descriptors;
+        }
+
+
+        /* =====================================================
+           ADAPTIVE RECOGNITION FALLBACK
+           =====================================================
+           Secondary detection pass.  Runs AFTER the normal
+           exact / bypass scan.
+
+           Only tokens whose range is NOT already covered by
+           an existing violation/caps descriptor are evaluated.
+
+           Confidence policy:
+             trusted -> detect
+             high    -> detect
+             medium / low / none -> skip (conservative)
+
+           Fail-safe: returns [] when the engine is unavailable,
+           throws, or vocabulary is not yet loaded.  Scanner
+           behaviour is completely unaffected in those cases.
+           ===================================================== */
+
+        _buildAdaptiveDescriptors(
+            messages,
+            existingDescriptors
+        ) {
+            const engine =
+                window.VimeReportAdaptiveRecognition;
+
+            if (
+                !engine ||
+                typeof engine.recognizeToken !== 'function'
+            ) {
+                return [];
             }
 
 
-            container
-                .querySelectorAll(
-                    '.vrh-violation-highlight'
-                )
-                .forEach(
-                    (highlight) => {
+            const HL =
+                window.VimeReportUnifiedHighlighter;
 
-                        highlight.replaceWith(
-                            document.createTextNode(
-                                highlight.textContent || ''
-                            )
-                        );
-                    }
-                );
+            const cssClass =
+                HL?.CSS_CLASSES?.VIOLATION ??
+                'vrh-hl-violation';
 
-
-            container.normalize();
-        }
-
-
-        /* =====================================================
-           CREATE HIGHLIGHT
-           ===================================================== */
-
-        createHighlight(text) {
-            const mark =
-                document.createElement(
-                    'mark'
-                );
-
-
-            mark.className =
-                'vrh-violation-highlight';
-
-
-            mark.textContent =
-                text;
+            const priority =
+                HL?.PRIORITY?.VIOLATION ??
+                40;
 
 
             /*
-             * Временный стиль.
-             * Финальный дизайн сделаем отдельно.
+             * Index existing descriptors by messageIndex so we
+             * can quickly skip already-detected token ranges.
              */
-            mark.style.background =
-                '#ff3b3b';
+            const coveredByMsg = new Map();
 
-            mark.style.color =
-                '#ffffff';
+            for (const d of existingDescriptors) {
+                if (!coveredByMsg.has(d.messageIndex)) {
+                    coveredByMsg.set(
+                        d.messageIndex,
+                        []
+                    );
+                }
 
-            mark.style.fontWeight =
-                '700';
-
-            mark.style.borderRadius =
-                '4px';
-
-            mark.style.padding =
-                '1px 4px';
-
-            mark.style.margin =
-                '0 1px';
+                coveredByMsg
+                    .get(d.messageIndex)
+                    .push({
+                        start: d.start,
+                        end:   d.end
+                    });
+            }
 
 
-            return mark;
+            const adaptiveDescriptors = [];
+
+            /*
+             * Extract contiguous Cyrillic / Latin / digit runs.
+             * Surrounding punctuation is excluded so the
+             * highlight covers only the token itself.
+             */
+            const TOKEN_RE =
+                /[а-яёa-zA-Z0-9]+/gi;
+
+
+            for (const message of messages) {
+                const msgIdx = message.index;
+                const text   = message.text;
+
+                if (
+                    typeof text !== 'string' ||
+                    !text
+                ) {
+                    continue;
+                }
+
+
+                /*
+                 * Lazily create the covered-range list for this
+                 * message.  We also push newly-found adaptive
+                 * ranges so we never emit two descriptors for the
+                 * same span within a single pass.
+                 */
+                if (!coveredByMsg.has(msgIdx)) {
+                    coveredByMsg.set(msgIdx, []);
+                }
+
+                const covered =
+                    coveredByMsg.get(msgIdx);
+
+
+                TOKEN_RE.lastIndex = 0;
+
+                let m;
+
+                while (
+                    (m = TOKEN_RE.exec(text)) !== null
+                ) {
+                    const tokenText  = m[0];
+                    const tokenStart = m.index;
+                    const tokenEnd   =
+                        tokenStart + tokenText.length;
+
+
+                    if (
+                        this._isRangeCovered(
+                            tokenStart,
+                            tokenEnd,
+                            covered
+                        )
+                    ) {
+                        continue;
+                    }
+
+
+                    let res;
+
+                    try {
+                        res = engine.recognizeToken(
+                            tokenText
+                        );
+                    } catch (e) {
+                        /* Engine error — skip this token */
+                        continue;
+                    }
+
+
+                    if (
+                        res &&
+                        res.recognized === true &&
+                        (
+                            res.level === 'trusted' ||
+                            res.level === 'high'
+                        )
+                    ) {
+                        adaptiveDescriptors.push({
+                            messageIndex: msgIdx,
+
+                            start: tokenStart,
+                            end:   tokenEnd,
+
+                            cssClass,
+
+                            priority,
+
+                            /*
+                             * Debug metadata — not used by the
+                             * renderer; preserved for future
+                             * learning / audit stages.
+                             */
+                            _meta: {
+                                source:        'adaptive',
+                                originalToken: tokenText,
+                                canonical:     res.canonical,
+                                confidence:    res.confidence,
+                                method:        res.method,
+                                level:         res.level,
+                            }
+                        });
+
+
+                        covered.push({
+                            start: tokenStart,
+                            end:   tokenEnd
+                        });
+                    }
+                }
+            }
+
+
+            return adaptiveDescriptors;
+        }
+
+
+        _isRangeCovered(
+            start,
+            end,
+            covered
+        ) {
+            return covered.some(
+                (r) =>
+                    r.start < end &&
+                    r.end   > start
+            );
         }
 
 
         /* =====================================================
-           FIND TEXT MATCHES
+           BUILD LEARNED DESCRIPTORS
+           =====================================================
+           Интегрирует знания модератора из Learning Store
+           в пайплайн подсветки.
+
+           Алиасы и фразы со статусом «learned» или «trusted»
+           сопоставляются с токенами и подстроками каждого
+           сообщения.
+
+           Исключения («Не нарушение») подавляют совпадения.
+
+           Возвращает { descriptors, matches }:
+             descriptors  — дескрипторы для unified-highlighter
+             matches      — записи в lastResults (счётчик панели)
+
+           Fail-safe: при недоступном хранилище или ошибке
+           возвращает { descriptors:[], matches:[] } —
+           нормальное сканирование не затрагивается.
            ===================================================== */
+
+        _buildLearnedDescriptors(
+            messages,
+            existingDescriptors
+        ) {
+            const EMPTY = { descriptors: [], matches: [] };
+
+            /* --- 1. Проверяем доступность Learning Store --- */
+
+            const store = window.VimeReportLearningStore;
+
+            if (
+                !store ||
+                store.getStatus?.().ready !== true
+            ) {
+                return EMPTY;
+            }
+
+
+            try {
+
+                /* --- 2. Снимок обученных данных (синхронные чтения) --- */
+
+                const rawAliases    = store.findAliases();
+                const rawPhrases    = store.findPhrases();
+                const rawExceptions = store.findExceptions();
+
+
+                /* Только подтверждённые записи */
+
+                const activeAliases = rawAliases.filter(
+                    (a) =>
+                        a.status === 'learned' ||
+                        a.status === 'trusted'
+                );
+
+                const activePhrases = rawPhrases.filter(
+                    (p) =>
+                        p.status === 'learned' ||
+                        p.status === 'trusted'
+                );
+
+
+                if (
+                    !activeAliases.length &&
+                    !activePhrases.length
+                ) {
+                    return EMPTY;
+                }
+
+
+                /* Множество исключений по нормализованному ключу */
+
+                const exceptionSet = new Set(
+                    rawExceptions.map((e) => e.normalized)
+                );
+
+
+                /* --- 3. Вспомогательная нормализация --- */
+
+                const normalizer =
+                    window.VimeReportTextNormalizer;
+
+                const _normalize = (text) => {
+                    if (
+                        normalizer &&
+                        typeof normalizer.normalizeToken === 'function'
+                    ) {
+                        try {
+                            return normalizer.normalizeToken(text).normalized;
+                        } catch (_) {}
+                    }
+                    return text.toLowerCase();
+                };
+
+
+                /* --- 4. Индекс алиасов: normKey → запись --- */
+
+                const aliasMap = new Map();
+
+                for (const alias of activeAliases) {
+                    const key = _normalize(alias.original);
+
+                    if (
+                        !exceptionSet.has(key) &&
+                        !aliasMap.has(key)
+                    ) {
+                        aliasMap.set(key, alias);
+                    }
+                }
+
+
+                /* --- 5. Карта покрытых диапазонов --- */
+
+                const coveredByMsg = new Map();
+
+                for (const d of existingDescriptors) {
+                    if (!coveredByMsg.has(d.messageIndex)) {
+                        coveredByMsg.set(
+                            d.messageIndex,
+                            []
+                        );
+                    }
+                    coveredByMsg.get(d.messageIndex).push({
+                        start: d.start,
+                        end:   d.end,
+                    });
+                }
+
+
+                const HL = window.VimeReportUnifiedHighlighter;
+
+                const cssClass =
+                    HL?.CSS_CLASSES?.VIOLATION ?? 'vrh-hl-violation';
+
+                /*
+                 * Приоритет чуть выше адаптивного (40),
+                 * чтобы при наложении побеждало явное знание
+                 * модератора, а не нечёткое распознавание.
+                 */
+                const priority = 45;
+
+
+                const descriptors = [];
+                const matches     = [];
+
+
+                /* --- 6. Поиск алиасов по токенам --- */
+
+                const TOKEN_RE = /[а-яёa-zA-Z0-9]+/gi;
+
+                if (aliasMap.size > 0) {
+
+                    for (const message of messages) {
+
+                        const msgIdx = message.index;
+                        const text   = message.text;
+
+                        if (
+                            typeof text !== 'string' ||
+                            !text
+                        ) {
+                            continue;
+                        }
+
+
+                        if (!coveredByMsg.has(msgIdx)) {
+                            coveredByMsg.set(msgIdx, []);
+                        }
+
+                        const covered = coveredByMsg.get(msgIdx);
+
+                        TOKEN_RE.lastIndex = 0;
+
+                        let m;
+
+                        while (
+                            (m = TOKEN_RE.exec(text)) !== null
+                        ) {
+                            const tokenText  = m[0];
+                            const tokenStart = m.index;
+                            const tokenEnd   =
+                                tokenStart + tokenText.length;
+
+
+                            if (
+                                this._isRangeCovered(
+                                    tokenStart,
+                                    tokenEnd,
+                                    covered
+                                )
+                            ) {
+                                continue;
+                            }
+
+
+                            const normToken = _normalize(tokenText);
+
+                            /* Пропускаем исключения */
+
+                            if (exceptionSet.has(normToken)) {
+                                continue;
+                            }
+
+
+                            const alias = aliasMap.get(normToken);
+
+                            if (!alias) continue;
+
+
+                            descriptors.push({
+                                messageIndex: msgIdx,
+                                start:        tokenStart,
+                                end:          tokenEnd,
+                                cssClass,
+                                priority,
+                                _meta: {
+                                    source:        'learned',
+                                    originalToken: tokenText,
+                                    category:      alias.category,
+                                    aliasId:       alias.id,
+                                    status:        alias.status,
+                                },
+                            });
+
+                            matches.push({
+                                messageIndex: msgIdx,
+                                time:         message.time,
+                                text,
+                                word:         alias.original,
+                                matchedText:  tokenText,
+                                matchMode:    'learned',
+                            });
+
+                            covered.push({
+                                start: tokenStart,
+                                end:   tokenEnd,
+                            });
+                        }
+                    }
+                }
+
+
+                /* --- 7. Поиск выученных фраз --- */
+
+                if (activePhrases.length > 0) {
+
+                    for (const message of messages) {
+
+                        const msgIdx = message.index;
+                        const text   = message.text;
+
+                        if (
+                            typeof text !== 'string' ||
+                            !text
+                        ) {
+                            continue;
+                        }
+
+
+                        if (!coveredByMsg.has(msgIdx)) {
+                            coveredByMsg.set(msgIdx, []);
+                        }
+
+                        const covered   = coveredByMsg.get(msgIdx);
+                        const textLower = text.toLowerCase();
+
+
+                        for (const phrase of activePhrases) {
+
+                            if (!phrase.original) continue;
+
+
+                            /* Исключения по нормализованной форме */
+
+                            if (
+                                phrase.normalized &&
+                                exceptionSet.has(phrase.normalized)
+                            ) {
+                                continue;
+                            }
+
+
+                            const searchStr =
+                                phrase.original.toLowerCase();
+
+                            if (!searchStr) continue;
+
+
+                            let searchPos = 0;
+
+                            while (searchPos < textLower.length) {
+
+                                const found =
+                                    textLower.indexOf(
+                                        searchStr,
+                                        searchPos
+                                    );
+
+                                if (found === -1) break;
+
+
+                                const start = found;
+                                const end   =
+                                    found + phrase.original.length;
+
+
+                                if (
+                                    !this._isRangeCovered(
+                                        start,
+                                        end,
+                                        covered
+                                    )
+                                ) {
+                                    descriptors.push({
+                                        messageIndex: msgIdx,
+                                        start,
+                                        end,
+                                        cssClass,
+                                        priority,
+                                        _meta: {
+                                            source:         'learned-phrase',
+                                            originalPhrase: phrase.original,
+                                            category:       phrase.category,
+                                            phraseId:       phrase.id,
+                                            status:         phrase.status,
+                                        },
+                                    });
+
+                                    matches.push({
+                                        messageIndex: msgIdx,
+                                        time:         message.time,
+                                        text,
+                                        word:         phrase.original,
+                                        matchedText:  text.slice(start, end),
+                                        matchMode:    'learned-phrase',
+                                    });
+
+                                    covered.push({ start, end });
+                                }
+
+                                searchPos = end;
+                            }
+                        }
+                    }
+                }
+
+
+                return { descriptors, matches };
+
+
+            } catch (e) {
+                console.error(
+                    '[Vime Report Helper] _buildLearnedDescriptors: ошибка',
+                    e
+                );
+                return EMPTY;
+            }
+        }
+
+
+        /* =====================================================
+           FILTER ADAPTIVE BY EXCEPTIONS
+           =====================================================
+           Убирает из адаптивных дескрипторов токены,
+           которые модератор явно отметил как «Не нарушение».
+
+           Исключения подавляют только адаптивное/обученное
+           распознавание — официальные словарные правила
+           этим методом не затрагиваются.
+
+           Fail-safe: при ошибке возвращает исходный массив.
+           ===================================================== */
+
+        _filterAdaptiveByExceptions(descriptors) {
+            if (!descriptors.length) return descriptors;
+
+            const store = window.VimeReportLearningStore;
+
+            if (
+                !store ||
+                store.getStatus?.().ready !== true
+            ) {
+                return descriptors;
+            }
+
+            try {
+                const exceptions = store.findExceptions();
+
+                if (!exceptions.length) return descriptors;
+
+                const exceptionSet = new Set(
+                    exceptions.map((e) => e.normalized)
+                );
+
+                const normalizer =
+                    window.VimeReportTextNormalizer;
+
+                return descriptors.filter((d) => {
+                    const token = d._meta?.originalToken;
+
+                    if (!token) return true;
+
+                    let norm;
+
+                    if (
+                        normalizer &&
+                        typeof normalizer.normalizeToken === 'function'
+                    ) {
+                        try {
+                            norm = normalizer.normalizeToken(token).normalized;
+                        } catch (_) {
+                            norm = token.toLowerCase();
+                        }
+                    } else {
+                        norm = token.toLowerCase();
+                    }
+
+                    return !exceptionSet.has(norm);
+                });
+
+            } catch (_) {
+                return descriptors;
+            }
+        }
+
+
+
 
         findTextMatches(
             text,
@@ -1469,193 +1980,21 @@
 
 
         /* =====================================================
-           HIGHLIGHT TEXT NODE
+           GET LAST VIOLATION DESCRIPTORS
+           =====================================================
+           Called by VimeReportRelativeAbuseIntegration to
+           retrieve violation + caps descriptors built during
+           the last scan(), so it can combine them with
+           relative-abuse descriptors in a single unified pass.
            ===================================================== */
 
-        highlightTextNode(
-            textNode,
-            words
-        ) {
-            const originalText =
-                textNode.nodeValue;
-
-
-            if (
-                !originalText ||
-                !words.length
-            ) {
-                return;
-            }
-
-
-            const matches =
-                this.findTextMatches(
-                    originalText,
-                    words
-                );
-
-
-            if (!matches.length) {
-                return;
-            }
-
-
-            const fragment =
-                document.createDocumentFragment();
-
-
-            let position = 0;
-
-
-            matches.forEach(
-                (match) => {
-
-                    if (
-                        match.index >
-                        position
-                    ) {
-                        fragment.appendChild(
-                            document.createTextNode(
-                                originalText.slice(
-                                    position,
-                                    match.index
-                                )
-                            )
-                        );
-                    }
-
-
-                    fragment.appendChild(
-                        this.createHighlight(
-                            match.text
-                        )
-                    );
-
-
-                    position =
-                        match.index +
-                        match.length;
-                }
-            );
-
-
-            if (
-                position <
-                originalText.length
-            ) {
-                fragment.appendChild(
-                    document.createTextNode(
-                        originalText.slice(
-                            position
-                        )
-                    )
-                );
-            }
-
-
-            textNode.replaceWith(
-                fragment
-            );
-        }
-
-
-        /* =====================================================
-           HIGHLIGHT RESULTS
-           ===================================================== */
-
-        highlightMatches(results) {
-            const container =
-                document.querySelector(
-                    '#mr_messages'
-                );
-
-
-            if (!container) {
-                return;
-            }
-
-
-            this.clearHighlights();
-
-
-            if (
-                !Array.isArray(results) ||
-                !results.length
-            ) {
-                return;
-            }
-
-
-            const words =
-                [
-                    ...new Set(
-                        results
-                            .map(
-                                (result) =>
-                                    result.word
-                            )
-                            .filter(Boolean)
-                    )
-                ];
-
-
-            const walker =
-                document.createTreeWalker(
-                    container,
-                    NodeFilter.SHOW_TEXT
-                );
-
-
-            const nodes = [];
-
-            let node;
-
-
-            while (
-                (
-                    node =
-                        walker.nextNode()
+        getLastViolationDescriptors() {
+            return [
+                ...(
+                    this._lastViolationDescriptors ??
+                    []
                 )
-                ) {
-                /*
-                 * Timestamp не трогаем.
-                 */
-                if (
-                    node.parentElement?.matches(
-                        'span.text-muted'
-                    )
-                ) {
-                    continue;
-                }
-
-
-                /*
-                 * Уже подсвеченный текст тоже.
-                 */
-                if (
-                    node.parentElement?.closest(
-                        '.vrh-violation-highlight'
-                    )
-                ) {
-                    continue;
-                }
-
-
-                nodes.push(
-                    node
-                );
-            }
-
-
-            nodes.forEach(
-                (textNode) => {
-
-                    this.highlightTextNode(
-                        textNode,
-                        words
-                    );
-                }
-            );
+            ];
         }
 
 
@@ -1768,7 +2107,15 @@
            ===================================================== */
 
         scan() {
-            this.clearHighlights();
+            const _t0 = performance.now();
+
+            /*
+             * Always clear first so buildMessageNodeIndex()
+             * sees clean text nodes.
+             */
+            window
+                .VimeReportUnifiedHighlighter
+                ?.clear?.();
 
 
             const messages =
@@ -1788,6 +2135,7 @@
 
             this.lastResults = [];
             this.lastRecommendations = [];
+            this._lastViolationDescriptors = [];
             this.lastCapsLock =
                 capsLock;
 
@@ -1796,17 +2144,11 @@
                 return [];
             }
 
-            if (
-                capsLock.detected
-            ) {
-                this.highlightCapsLock(
-                    capsLock
-                );
-            }
-
             /*
              * Сначала обычный Report Scanner.
              */
+            const _t1 = performance.now();
+
             if (
                 prohibitedWords.length
             ) {
@@ -1824,6 +2166,8 @@
                 );
             }
 
+            const _t2 = performance.now();
+
 
             /*
              * Затем классификатор причин.
@@ -1836,10 +2180,113 @@
                     messages
                 );
 
+            const _t3 = performance.now();
 
-            this.highlightMatches(
-                this.lastResults
-            );
+
+            /*
+             * Build descriptors for the unified highlighter.
+             *
+             * We always build them, regardless of whether
+             * _relativeAbuseIntegrationActive is set, so that
+             * the integration wrapper can read them via
+             * getLastViolationDescriptors().
+             */
+            this._lastViolationDescriptors = [
+                ...this._buildCapsDescriptors(capsLock),
+                ...this._buildViolationDescriptors(
+                    messages,
+                    prohibitedWords
+                )
+            ];
+
+            const _t4 = performance.now();
+
+
+            /*
+             * Обученные знания модератора (2-й приоритет).
+             *
+             * Алиасы и фразы, явно сохранённые через
+             * «Обучить сканер», проверяются раньше нечёткого
+             * распознавания.  Это гарантирует, что явное знание
+             * модератора не заглушается автоматикой.
+             *
+             * Fail-safe: при недоступном хранилище возвращается
+             * { descriptors:[], matches:[] } без исключений.
+             */
+            const learned =
+                this._buildLearnedDescriptors(
+                    messages,
+                    this._lastViolationDescriptors
+                );
+
+            if (learned.descriptors.length) {
+                this._lastViolationDescriptors.push(
+                    ...learned.descriptors
+                );
+            }
+
+            if (learned.matches.length) {
+                this.lastResults.push(
+                    ...learned.matches
+                );
+            }
+
+            const _t5 = performance.now();
+
+
+            /*
+             * Adaptive Recognition fallback (3-й приоритет).
+             *
+             * Evaluates tokens not already detected by the
+             * exact / bypass scan or learned aliases.
+             * Only trusted/high-confidence results are promoted
+             * to violation descriptors.
+             *
+             * Исключения («Не нарушение») отфильтровываются
+             * методом _filterAdaptiveByExceptions.
+             *
+             * Fail-safe: if the engine is unavailable the array
+             * is empty and no existing behaviour is affected.
+             */
+            const rawAdaptiveDescriptors =
+                this._buildAdaptiveDescriptors(
+                    messages,
+                    this._lastViolationDescriptors
+                );
+
+            const _t6 = performance.now();
+
+            const adaptiveDescriptors =
+                this._filterAdaptiveByExceptions(
+                    rawAdaptiveDescriptors
+                );
+
+            if (adaptiveDescriptors.length) {
+                this._lastViolationDescriptors.push(
+                    ...adaptiveDescriptors
+                );
+            }
+
+            const _t7 = performance.now();
+
+
+            /*
+             * When the Relative Abuse integration is active it
+             * will apply ALL descriptors (violation + relative)
+             * in a single pass.  Only apply directly here when
+             * the integration is absent.
+             */
+            if (
+                !this._relativeAbuseIntegrationActive
+            ) {
+                window
+                    .VimeReportUnifiedHighlighter
+                    ?.applyHighlights(
+                        this._lastViolationDescriptors
+                    );
+            }
+
+            const _tEnd = performance.now();
 
 
             console.group(
@@ -1866,9 +2313,36 @@
 
 
             console.log(
+                'Обученные совпадения:',
+                learned.matches.length
+            );
+
+
+            console.log(
+                'Adaptive detections:',
+                adaptiveDescriptors.length
+            );
+
+
+            console.log(
                 'Recommendations:',
                 this.lastRecommendations
             );
+
+
+            /* --- Тайминги по этапам --- */
+
+            console.group('Тайминги (мс)');
+            console.log(`Официальное сканирование: ${(_t2 - _t1).toFixed(1)}`);
+            console.log(`Рекомендации:             ${(_t3 - _t2).toFixed(1)}`);
+            console.log(`Дескрипторы нарушений:    ${(_t4 - _t3).toFixed(1)}`);
+            console.log(`Обученные знания:         ${(_t5 - _t4).toFixed(1)}`);
+            console.log(`Адаптивное распознавание: ${(_t6 - _t5).toFixed(1)}`);
+            console.log(`Фильтр исключений:        ${(_t7 - _t6).toFixed(1)}`);
+            console.log(`Подсветка:                ${(_tEnd - _t7).toFixed(1)}`);
+            console.log(`ИТОГО:                    ${(_tEnd - _t0).toFixed(1)}`);
+            console.log(`Кэш bypass-regex:         ${this._regexCache.size} записей`);
+            console.groupEnd();
 
 
             console.groupEnd();
@@ -1891,9 +2365,11 @@
         clear() {
             this.lastResults = [];
             this.lastRecommendations = [];
-            this.lastCapsLock =
-                null;
-            this.clearHighlights();
+            this.lastCapsLock = null;
+            this._lastViolationDescriptors = [];
+            window
+                .VimeReportUnifiedHighlighter
+                ?.clear?.();
         }
 
 

@@ -1684,7 +1684,7 @@
 
             element.innerHTML = `
         <span>
-            Найдено: ${results.length} совп. / ${messageIndexes.size} сообщ.
+            ${results.length} нарушений · ${messageIndexes.size} сообщ.
         </span>
 
         <button
@@ -1702,7 +1702,7 @@
                 cursor: pointer;
             "
         >
-            Показать ${messageIndexes.size}
+            Детали
         </button>
     `;
 

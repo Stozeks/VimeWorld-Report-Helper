@@ -22,6 +22,7 @@
         "src/core/dom-adapter.js",
 
         "src/features/message-parser.js",
+        "src/features/unified-highlighter.js",
         "src/features/relative-context-detector.js",
         "src/features/relative-abuse-detector.js",
         "src/features/violation-scanner.js",
@@ -31,8 +32,15 @@
         "src/features/monthly-stats.js",
         "src/features/reason-undo.js",
 
+        "src/features/adaptive-recognition/text-normalizer.js",
+        "src/features/adaptive-recognition/fuzzy-matcher.js",
+        "src/features/adaptive-recognition/recognition-engine.js",
+        "src/features/adaptive-recognition/learning-store.js",
+        "src/features/adaptive-recognition/recognition-test-harness.js",
+
         "src/ui/stats-panel.js",
         "src/ui/report-panel.js",
+        "src/features/adaptive-recognition/learning-ui.js",
 
         "src/content.js"
       ],
