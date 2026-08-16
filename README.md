@@ -85,7 +85,19 @@
 
 Подсветка собрана через отдельный `Unified Highlighter`, чтобы разные системы анализа не пытались независимо менять одни и те же сообщения.
 
+<p align="center">
+  <img src="docs/images/violation-scanner-highlighting.png"
+       alt="VimeWorld Report Helper — подсветка найденных нарушений"
+       width="100%">
+</p>
+
+<p align="center">
+  <sub>Пример работы сканера: найденные нарушения и связанные фрагменты подсвечиваются прямо в истории сообщений.</sub>
+</p>
+
 ---
+
+## Adaptive Recognition
 
 ## Adaptive Recognition
 
