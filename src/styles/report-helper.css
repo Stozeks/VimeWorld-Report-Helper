@@ -476,6 +476,14 @@
     white-space: nowrap;
 }
 
+/* In a table cell the identity is the sole content:
+   switch to block-level flex so it fills the cell width
+   and avoids text-baseline alignment quirks. */
+.table > tbody > tr > td .vrh-player-identity {
+    display: flex;
+    align-items: center;
+}
+
 .vrh-player-identity--compact {
     gap: 5px;
     font-size: 12px;

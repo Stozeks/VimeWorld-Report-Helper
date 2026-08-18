@@ -387,7 +387,12 @@
             return false;
         }
 
-        if (before) {
+        // Strip stray rank-prefix text (e.g. "[MODER] " or "[] ") left
+        // before the username — the identity widget owns its own prefix
+        // rendering, and these text nodes cause baseline misalignment.
+        const isRankPrefixRemnant = /^\s*(\[[^\]]*\])?\s*$/.test(before);
+
+        if (before && !isRankPrefixRemnant) {
             parent.insertBefore(document.createTextNode(before), textNode);
         }
 
