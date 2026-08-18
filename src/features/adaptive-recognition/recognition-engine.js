@@ -102,19 +102,25 @@
      * @param {object|null}  normResult - output of normalizeToken(), or null
      * @returns {RecognitionResult}
      */
-    function noMatch(original, normResult) {
+    function noMatch(original, normResult, normalizationCandidates = []) {
         return {
             original,
             normalized:      normResult?.normalized ?? original,
             recognized:      false,
             canonical:       null,
+            matchedText:     null,
+            category:        null,
             confidence:      0,
             level:           'none',
             method:          'none',
+            matchType:       'none',
+            source:          'none',
             distance:        null,
             similarity:      null,
+            reason:          null,
             transformations: normResult?.transformations ?? [],
             indexMap:        normResult?.indexMap        ?? [],
+            normalizationCandidates,
             alternatives:    [],
             candidateId:     null,
         };
@@ -155,6 +161,7 @@
             this._indexReady = false;
             this._exactSet   = null;
             this._charIndex  = null;
+            this._aliasReady = false;
         }
 
 
@@ -192,31 +199,49 @@
 
             this._exactSet  = new Set();
             this._charIndex = new Map();
+            this._aliasReady = !!window.VimeReportRecognitionAliases;
 
             for (const word of vocab) {
                 if (typeof word !== 'string' || word.length === 0) continue;
 
-                /*
-                 * Normalize the dictionary word so that exact lookups compare
-                 * normalized-input against normalized-canonical uniformly.
-                 * Dictionary words are already clean Cyrillic lowercase, so
-                 * this usually returns the word unchanged — but it is safer
-                 * to run the same pipeline on both sides.
-                 */
-                const normalized = normalizer
-                    ? normalizer.normalize(word.toLowerCase())
-                    : word.toLowerCase();
+                const forms =
+                    normalizer &&
+                    typeof normalizer.normalizeTokenForms === 'function'
+                        ? normalizer.normalizeTokenForms(word)
+                        : [{
+                            kind: 'base',
+                            result: normalizer
+                                ? normalizer.normalizeToken(word)
+                                : {
+                                    normalized: word.toLowerCase(),
+                                    changed: false
+                                }
+                        }];
 
-                this._exactSet.add(normalized);
+                const seen = new Set();
 
-                /* Index by first character for pre-filtering */
-                const fc = normalized[0];
-                if (!fc) continue;
+                for (const form of forms) {
+                    const normalized = form?.result?.normalized;
 
-                if (!this._charIndex.has(fc)) {
-                    this._charIndex.set(fc, []);
+                    if (typeof normalized !== 'string' || !normalized) {
+                        continue;
+                    }
+
+                    if (seen.has(normalized)) {
+                        continue;
+                    }
+
+                    seen.add(normalized);
+                    this._exactSet.add(normalized);
+
+                    const fc = normalized[0];
+                    if (!fc) continue;
+
+                    if (!this._charIndex.has(fc)) {
+                        this._charIndex.set(fc, []);
+                    }
+                    this._charIndex.get(fc).push({ word, normalized });
                 }
-                this._charIndex.get(fc).push({ word, normalized });
             }
 
             this._indexReady = true;
@@ -299,32 +324,66 @@
             }
 
             /* ---- Step 1: Normalize ---- */
-            const normResult = normalizer.normalizeToken(token);
-            const normInput  = normResult.normalized;
+            const formResults =
+                typeof normalizer.normalizeTokenForms === 'function'
+                    ? normalizer.normalizeTokenForms(token)
+                    : [{
+                        kind: 'base',
+                        result: normalizer.normalizeToken(token)
+                    }];
+
+            const primaryForm =
+                formResults[0]?.result ??
+                normalizer.normalizeToken(token);
+
+            const normInput  = primaryForm.normalized;
+            const normalizationCandidates = formResults.map((form) => ({
+                kind: form.kind,
+                normalized: form.result.normalized,
+                changed: form.result.changed
+            }));
+
+            const exactCandidate = formResults.find(
+                (form) =>
+                    form?.result?.normalized &&
+                    this._exactSet.has(form.result.normalized)
+            );
+            const aliases = window.VimeReportRecognitionAliases;
 
             /* ---- Step 2: Exact lookup ---- */
-            if (this._exactSet.has(normInput)) {
+            if (exactCandidate) {
                 /*
                  * method='exact'      — original token already matched
                  * method='normalized' — normalizer transformed the token
                  *                       before it matched (bypass detected)
                  */
-                const method = normResult.changed ? 'normalized' : 'exact';
+                const method =
+                    exactCandidate.kind === 'base'
+                        ? (exactCandidate.result.changed ? 'normalized' : 'exact')
+                        : 'layout';
 
                 return {
                     original:        token,
-                    normalized:      normInput,
+                    normalized:      exactCandidate.result.normalized,
                     recognized:      true,
-                    canonical:       normInput,
+                    canonical:       exactCandidate.result.normalized,
+                    matchedText:     exactCandidate.result.normalized,
+                    category:        null,
                     confidence:      1.0,
                     level:           'trusted',
                     method,
                     distance:        0,
                     similarity:      1.0,
-                    transformations: normResult.transformations,
-                    indexMap:        normResult.indexMap,
+                    matchType:       method,
+                    source:          aliases?.hasWord?.(exactCandidate.result.normalized)
+                        ? 'built-in-knowledge'
+                        : 'official-vocabulary',
+                    reason:          'exact-match',
+                    transformations: exactCandidate.result.transformations,
+                    indexMap:        exactCandidate.result.indexMap,
+                    normalizationCandidates,
                     alternatives:    [],
-                    candidateId:     normInput + ':' + normInput,
+                    candidateId:     exactCandidate.result.normalized + ':' + exactCandidate.result.normalized,
                 };
             }
 
@@ -336,14 +395,14 @@
              * waste CPU and risk false positives on short fragments.
              */
             if (normInput.length <= SHORT_TOKEN_FUZZY_THRESHOLD) {
-                return noMatch(token, normResult);
+                return noMatch(token, primaryForm, normalizationCandidates);
             }
 
             /* ---- Step 4: Fuzzy search ---- */
             const candidates = this._getCandidates(normInput);
 
             if (candidates.length === 0) {
-                return noMatch(token, normResult);
+                return noMatch(token, primaryForm, normalizationCandidates);
             }
 
             const hits = [];
@@ -368,7 +427,7 @@
             }
 
             if (hits.length === 0) {
-                return noMatch(token, normResult);
+                return noMatch(token, primaryForm, normalizationCandidates);
             }
 
             /* Sort best first: highest confidence, then highest similarity */
@@ -397,13 +456,21 @@
                 normalized:      normInput,
                 recognized,
                 canonical:       recognized ? best.canonical : null,
+                matchedText:     recognized ? best.canonical : null,
+                category:        null,
                 confidence:      best.confidence,
                 level,
                 method:          'fuzzy',
+                matchType:       'fuzzy',
+                source:          aliases?.hasWord?.(best.canonical)
+                    ? 'built-in-knowledge'
+                    : 'official-vocabulary',
                 distance:        best.distance,
                 similarity:      best.similarity,
-                transformations: normResult.transformations,
-                indexMap:        normResult.indexMap,
+                reason:          best.reason,
+                transformations: primaryForm.transformations,
+                indexMap:        primaryForm.indexMap,
+                normalizationCandidates,
                 alternatives,
                 candidateId:     recognized
                     ? best.canonical + ':' + normInput
@@ -444,11 +511,26 @@
             console.log(`normalized:  ${r.normalized}`);
             console.log(`recognized:  ${r.recognized}`);
             console.log(`canonical:   ${r.canonical ?? '—'}`);
+            console.log(`matchedText: ${r.matchedText ?? '—'}`);
+            console.log(`category:    ${r.category ?? '—'}`);
             console.log(`method:      ${r.method}`);
+            console.log(`matchType:   ${r.matchType ?? '—'}`);
+            console.log(`source:      ${r.source ?? '—'}`);
             console.log(`distance:    ${r.distance ?? '—'}`);
             console.log(`similarity:  ${fmtPct(r.similarity)}`);
             console.log(`confidence:  ${fmtPct(r.confidence)}`);
+            console.log(`reason:      ${r.reason ?? '—'}`);
             console.log(`level:       ${r.level}`);
+
+            if (r.normalizationCandidates?.length > 0) {
+                console.log('normalizationCandidates:');
+                r.normalizationCandidates.forEach((candidate, i) => {
+                    console.log(
+                        `  [${i + 1}] ${candidate.kind}: "${candidate.normalized}"` +
+                        ` changed=${candidate.changed ? 'yes' : 'no'}`
+                    );
+                });
+            }
 
             if (r.transformations?.length > 0) {
                 console.log(
@@ -487,12 +569,16 @@
             const fuzzyAvail = !!window.VimeReportFuzzyMatcher;
             const vocabAvail = !!window.VimeReportProhibitedWordsReady;
             const vocabSize  = window.VimeReportProhibitedWords?.length ?? 0;
+            const aliasStatus =
+                window.VimeReportRecognitionAliases?.getStatus?.() ?? null;
 
             return {
                 normalizerAvailable:   normAvail,
                 fuzzyMatcherAvailable: fuzzyAvail,
                 vocabularyAvailable:   vocabAvail,
                 vocabularySize:        vocabSize,
+                aliasAvailable:        !!window.VimeReportRecognitionAliases,
+                aliasStatus,
                 indexBuilt:            this._indexReady,
                 ready:                 normAvail && fuzzyAvail && vocabAvail,
             };

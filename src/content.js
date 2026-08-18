@@ -3,6 +3,7 @@
 
     const adapter = window.VimeReportDomAdapter;
     const reportPanel = window.VimeReportPanel;
+    const playerIdentityUI = window.VimeReportPlayerIdentityUI;
 
     if (!adapter) {
         console.error('[Vime Report Helper] DOM Adapter not loaded.');
@@ -15,9 +16,18 @@
     }
 
     const LAUNCHER_ID = 'vrh-launcher';
+    const OWNED_ROOT_SELECTOR = '.vrh-player-identity, #vrh-report-panel, #vrh-launcher, #vrh-learning-action, #vrh-learning-dialog, #vrh-learning-toast, #vrh-monthly-stats';
+    const REPORT_LIST_DEBOUNCE_MS = 100;
 
     let modalUpdateTimer = null;
     let lastOpenedReportId = null;
+    let reportListObserver = null;
+    let reportListRefreshTimer = null;
+    let lastReportListSnapshot = null;
+    let reportListObserverCallbacks = 0;
+    let reportListIgnoredVrhMutations = 0;
+    let reportListDebouncedRuns = 0;
+    let reportListActualChanges = 0;
 
     console.log('[Vime Report Helper] Starting v0.4.0...');
 
@@ -141,7 +151,9 @@
             const report = adapter.getCurrentReport();
 
             if (report?.id) {
+                reportPanel.userClosedForReportId = null;
                 reportPanel.show(report);
+                playerIdentityUI?.scheduleRefresh?.();
 
                 lastOpenedReportId = report.id;
 
@@ -163,82 +175,131 @@
 
 
     function updateLauncherState(report = null) {
-        const state =
-            document.getElementById(
-                'vrh-launcher-state'
-            );
-
-        const action =
-            document.getElementById(
-                'vrh-launcher-action-text'
-            );
-
-        const launcher =
-            document.getElementById(
-                LAUNCHER_ID
-            );
+        const state = document.getElementById('vrh-launcher-state');
+        const action = document.getElementById('vrh-launcher-action-text');
+        const launcher = document.getElementById(LAUNCHER_ID);
 
         if (!state || !action || !launcher) {
             return;
         }
 
-
         if (report?.id) {
             launcher.dataset.mode = 'report';
-
-            state.textContent =
-                `Репорт #${report.id}`;
-
-            action.textContent =
-                'Открыть для репорта';
-
+            state.textContent = `Репорт #${report.id}`;
+            action.textContent = 'Открыть для репорта';
             return;
         }
 
-
         launcher.dataset.mode = 'manual';
-
-        state.textContent =
-            'Готов к работе';
-
-        action.textContent =
-            reportPanel.isVisible()
-                ? 'Вернуться в Toolkit'
-                : 'Открыть Toolkit';
+        state.textContent = 'Готов к работе';
+        action.textContent = reportPanel.isVisible()
+            ? 'Вернуться в Toolkit'
+            : 'Открыть Toolkit';
     }
 
+    function getMutationElement(node) {
+        if (!node) {
+            return null;
+        }
+
+        if (node.nodeType === Node.ELEMENT_NODE) {
+            return node;
+        }
+
+        return node.parentElement || node.parentNode || null;
+    }
+
+    function isInsideVrhOwnedRoot(node) {
+        const element = getMutationElement(node);
+
+        if (!element || typeof element.closest !== 'function') {
+            return false;
+        }
+
+        return Boolean(element.closest(OWNED_ROOT_SELECTOR));
+    }
+
+    function isVrhOwnedMutation(mutation) {
+        if (!mutation) {
+            return false;
+        }
+
+        if (isInsideVrhOwnedRoot(mutation.target)) {
+            return true;
+        }
+
+        if (mutation.type === 'childList') {
+            const addedOnlyOwned = Array.from(mutation.addedNodes || []).every((node) => isInsideVrhOwnedRoot(node));
+            const removedOnlyOwned = Array.from(mutation.removedNodes || []).every((node) => isInsideVrhOwnedRoot(node));
+            return addedOnlyOwned && removedOnlyOwned;
+        }
+
+        if (mutation.type === 'characterData') {
+            return isInsideVrhOwnedRoot(mutation.target);
+        }
+
+        return false;
+    }
+
+    function getReportListSnapshot() {
+        const rows = adapter.getReportRows();
+        const ids = rows
+            .map((row) => adapter.getReportIdFromRow(row))
+            .filter((id) => Boolean(id));
+
+        return {
+            ids,
+            key: ids.join('|'),
+            count: ids.length
+        };
+    }
+
+    function analyzeReportListChanges() {
+        reportListDebouncedRuns += 1;
+
+        const snapshot = getReportListSnapshot();
+
+        if (snapshot.key === lastReportListSnapshot) {
+            return;
+        }
+
+        lastReportListSnapshot = snapshot.key;
+        reportListActualChanges += 1;
+
+        console.log('[Vime Report Helper] Report list changed. Active:', snapshot.count);
+        playerIdentityUI?.scheduleRefresh?.();
+    }
+
+    function scheduleReportListAnalysis() {
+        if (reportListRefreshTimer) {
+            clearTimeout(reportListRefreshTimer);
+        }
+
+        reportListRefreshTimer = window.setTimeout(() => {
+            reportListRefreshTimer = null;
+            analyzeReportListChanges();
+        }, REPORT_LIST_DEBOUNCE_MS);
+    }
 
     /* =========================================================
        REPORTS
        ========================================================= */
 
     function scanReports() {
-        const table =
-            adapter.getReportsTable();
+        const table = adapter.getReportsTable();
+        const rows = adapter.getReportRows();
 
-        const rows =
-            adapter.getReportRows();
+        lastReportListSnapshot = getReportListSnapshot().key;
 
-        console.log(
-            '[Vime Report Helper] Reports table:',
-            Boolean(table)
-        );
+        console.log('[Vime Report Helper] Reports table:', Boolean(table));
+        console.log('[Vime Report Helper] Active reports:', rows.length);
 
-        console.log(
-            '[Vime Report Helper] Active reports:',
-            rows.length
-        );
+        rows.forEach((row) => {
+            console.log('[Vime Report Helper] Report detected:', adapter.getReportIdFromRow(row));
+        });
 
-        rows.forEach(
-            (row) => {
-                console.log(
-                    '[Vime Report Helper] Report detected:',
-                    adapter.getReportIdFromRow(row)
-                );
-            }
-        );
+        playerIdentityUI?.scheduleRefresh?.();
     }
-
 
     /* =========================================================
        MODAL STATE
@@ -247,198 +308,129 @@
     function handleReportModalState() {
         clearTimeout(modalUpdateTimer);
 
-        modalUpdateTimer =
-            window.setTimeout(
-                () => {
+        modalUpdateTimer = window.setTimeout(() => {
+            if (!adapter.isReportOpen()) {
+                if (
+                    lastOpenedReportId !== null ||
+                    reportPanel.getMode() === 'report'
+                ) {
+                    lastOpenedReportId = null;
+                    reportPanel.closeReportMode();
+                }
 
-                    /*
-                     * =============================================
-                     * REPORT CLOSED
-                     * =============================================
-                     */
+                updateLauncherState(null);
+                reportPanel.userClosedForReportId = null;
+                return;
+            }
 
-                    if (!adapter.isReportOpen()) {
-                        if (lastOpenedReportId !== null) {
-                            lastOpenedReportId = null;
+            const report = adapter.getCurrentReport();
 
-                            /*
-                             * Закрываем только Report Mode.
-                             * Launcher при этом остаётся.
-                             */
+            if (!report?.id) {
+                return;
+            }
 
-                            reportPanel.closeReportMode();
-                        }
+            updateLauncherState(report);
 
-                        updateLauncherState(null);
+            if (
+                reportPanel.userClosedForReportId === report.id &&
+                !reportPanel.isVisible()
+            ) {
+                return;
+            }
 
-                        return;
-                    }
+            const activeReportId = reportPanel.currentReport?.id ?? null;
 
+            if (activeReportId !== report.id) {
+                lastOpenedReportId = report.id;
+                reportPanel.userClosedForReportId = null;
+                reportPanel.show(report);
+                playerIdentityUI?.scheduleRefresh?.();
+                return;
+            }
 
-                    /*
-                     * =============================================
-                     * REPORT OPEN
-                     * =============================================
-                     */
+            if (!reportPanel.isVisible()) {
+                reportPanel.show(report);
+                playerIdentityUI?.scheduleRefresh?.();
+                return;
+            }
 
-                    const report =
-                        adapter.getCurrentReport();
-
-                    if (!report?.id) {
-                        return;
-                    }
-
-
-                    updateLauncherState(report);
-
-
-                    /*
-                     * Важно:
-                     *
-                     * Не вызываем show() на каждую мутацию DOM.
-                     * Иначе любое изменение самой VRH-панели
-                     * могло бы снова её открывать.
-                     *
-                     * Автоматически показываем только при
-                     * открытии нового репорта.
-                     */
-
-                    if (
-                        lastOpenedReportId !==
-                        report.id
-                    ) {
-                        lastOpenedReportId =
-                            report.id;
-
-                        reportPanel.show(report);
-
-                        console.log(
-                            '[Vime Report Helper] Opened report:',
-                            report
-                        );
-                    }
-
-                },
-                100
-            );
+            reportPanel.update(report);
+        }, 100);
     }
-
 
     /* =========================================================
        WATCH REPORT MODAL
        ========================================================= */
 
     function watchReportModal() {
-        const modal =
-            adapter.getReportModal();
+        const modal = adapter.getReportModal();
 
         if (!modal) {
-            console.warn(
-                '[Vime Report Helper] Report modal not found.'
-            );
-
+            console.warn('[Vime Report Helper] Report modal not found.');
             return;
         }
 
-
-        const observer =
-            new MutationObserver(
-                (mutations) => {
-
-                    /*
-                     * VRH в Report Mode физически находится
-                     * внутри modal.
-                     *
-                     * Поэтому игнорируем изменения,
-                     * которые произошли только внутри VRH.
-                     */
-
-                    const hasExternalMutation =
-                        mutations.some(
-                            (mutation) => {
-
-                                const panel =
-                                    document.getElementById(
-                                        'vrh-report-panel'
-                                    );
-
-                                if (!panel) {
-                                    return true;
-                                }
-
-                                return !panel.contains(
-                                    mutation.target
-                                );
-                            }
-                        );
-
-
-                    if (!hasExternalMutation) {
-                        return;
-                    }
-
-
-                    handleReportModalState();
-                }
-            );
-
-
-        observer.observe(
-            modal,
-            {
-                attributes: true,
-                childList: true,
-                subtree: true,
-                characterData: true
+        const observer = new MutationObserver((mutations) => {
+            if (!mutations.some((mutation) => !isVrhOwnedMutation(mutation))) {
+                return;
             }
-        );
 
+            handleReportModalState();
+        });
 
-        /*
-         * На случай прямой ссылки вида:
-         * #report939154
-         */
+        observer.observe(modal, {
+            attributes: true,
+            childList: true,
+            subtree: true,
+            characterData: true
+        });
 
         handleReportModalState();
     }
-
 
     /* =========================================================
        REPORT TABLE
        ========================================================= */
 
     function watchReportsTable() {
-        const table =
-            adapter.getReportsTable();
+        const table = adapter.getReportsTable();
 
         if (!table) {
-            console.warn(
-                '[Vime Report Helper] Reports table not found.'
-            );
-
+            console.warn('[Vime Report Helper] Reports table not found.');
             return;
         }
 
+        reportListObserver = new MutationObserver((mutations) => {
+            reportListObserverCallbacks += 1;
 
-        const observer =
-            new MutationObserver(
-                () => {
-                    console.log(
-                        '[Vime Report Helper] Report list changed. Active:',
-                        adapter.getReportRows().length
-                    );
-                }
-            );
-
-
-        observer.observe(
-            table,
-            {
-                childList: true,
-                subtree: true
+            if (!mutations.some((mutation) => !isVrhOwnedMutation(mutation))) {
+                reportListIgnoredVrhMutations += 1;
+                return;
             }
-        );
+
+            scheduleReportListAnalysis();
+        });
+
+        reportListObserver.observe(table, {
+            childList: true,
+            subtree: true,
+            characterData: true
+        });
     }
+
+    window.VimeReportListDebug = function () {
+        const snapshot = getReportListSnapshot();
+
+        return {
+            observerCallbacks: reportListObserverCallbacks,
+            ignoredVrhMutations: reportListIgnoredVrhMutations,
+            debouncedRuns: reportListDebouncedRuns,
+            actualListChanges: reportListActualChanges,
+            currentReportIds: snapshot.ids,
+            currentSnapshotKey: snapshot.key,
+            currentSnapshotCount: snapshot.count
+        };
+    };
 
 
     /* =========================================================
@@ -468,6 +460,7 @@
         watchReportModal();
 
         watchReportsTable();
+        playerIdentityUI?.scheduleRefresh?.();
 
 
         console.log(

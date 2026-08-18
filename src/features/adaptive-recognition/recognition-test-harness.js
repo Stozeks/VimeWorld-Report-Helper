@@ -85,6 +85,77 @@
         }
     }
 
+    function findAliasMatches(text) {
+        const aliases = dep('VimeReportRecognitionAliases');
+        if (!aliases || typeof aliases.findMatches !== 'function') {
+            return [];
+        }
+        try {
+            return aliases.findMatches(text);
+        } catch (e) {
+            return [{
+                _error: String(e)
+            }];
+        }
+    }
+
+    function summarizeCases(cases) {
+        const failed = cases.filter((item) => item.status !== STATUS.PASS);
+
+        return {
+            passed: cases.length - failed.length,
+            total: cases.length,
+            failed
+        };
+    }
+
+    function runContextProbe(input) {
+        const detector = dep('VimeReportRelativeContextDetector');
+
+        if (!detector || typeof detector.analyzeMessage !== 'function') {
+            return null;
+        }
+
+        try {
+            return detector.analyzeMessage({
+                text: input,
+                index: 0,
+                time: '00:00:00'
+            });
+        } catch (e) {
+            return { _error: String(e) };
+        }
+    }
+
+    function runCrossMessageProbe(messages) {
+        const scanner = dep('VimeReportViolationScanner');
+
+        if (!scanner || typeof scanner._buildCrossMessageKnowledge !== 'function') {
+            return null;
+        }
+
+        try {
+            const prohibited = window.VimeReportProhibitedWords ?? [];
+            return scanner._buildCrossMessageKnowledge(messages, prohibited);
+        } catch (e) {
+            return { _error: String(e) };
+        }
+    }
+
+    function runCategoryProbe(input) {
+        const rules = dep('VimeReportViolationRules');
+
+        if (!rules || typeof rules.classifyMessage !== 'function') {
+            return null;
+        }
+
+        try {
+            return rules.classifyMessage(input);
+        } catch (e) {
+            return { _error: String(e) };
+        }
+    }
+
     function nowMs() {
         return (typeof performance !== 'undefined' && performance.now)
             ? performance.now()
@@ -173,6 +244,87 @@
 
 
         /* ================================================================
+           GROUP: alias
+           Built-in knowledge layer (phrases / compact aliases).
+           ================================================================ */
+
+        { name: 'alias: иди на хуй',
+          group: 'alias', input: 'иди на хуй',
+          _aliasReasonId: 'player-insult-mat',
+          _aliasCategory: 'INSULT_MAT' },
+
+        { name: 'alias: 0 iq',
+          group: 'alias', input: '0 iq',
+          _aliasReasonId: 'player-insult',
+          _aliasCategory: 'INSULT' },
+
+
+        /* ================================================================
+           GROUP: context
+           Relative context detector checks.
+           ================================================================ */
+
+        { name: 'context: self mother',
+          group: 'context', input: 'моя мама играет',
+          _contextDetected: true, _contextTarget: 'self' },
+
+        { name: 'context: other mother',
+          group: 'context', input: 'твоя мама играет',
+          _contextDetected: true, _contextTarget: 'other' },
+
+        { name: 'context: third-person father',
+          group: 'context', input: 'его отец дома',
+          _contextDetected: true, _contextTarget: 'third-person' },
+
+        { name: 'context: ambiguous brother',
+          group: 'context', input: 'братан ты где',
+          _contextDetected: false, _contextTarget: 'unknown' },
+
+
+        /* ================================================================
+           GROUP: cross-message
+           Fail-closed same-author / different-author probes.
+           ================================================================ */
+
+        { name: 'cross-message: same author',
+          group: 'cross-message',
+          _crossMessages: [
+              { author: 'a', index: 0, time: '00:00:01', text: 'иди на' },
+              { author: 'a', index: 1, time: '00:00:02', text: 'хуй' }
+          ],
+          _crossExpected: true },
+
+        { name: 'cross-message: different authors',
+          group: 'cross-message',
+          _crossMessages: [
+              { author: 'a', index: 0, time: '00:00:01', text: 'иди на' },
+              { author: 'b', index: 1, time: '00:00:02', text: 'хуй' }
+          ],
+          _crossExpected: false },
+
+
+        /* ================================================================
+           GROUP: category
+           Official reason mapping checks.
+           ================================================================ */
+
+        { name: 'category: insult',
+          group: 'category', input: 'ты дебил',
+          _categoryReasonId: 'player-insult',
+          _categoryLabel: 'Оскорбление игроков' },
+
+        { name: 'category: mat',
+          group: 'category', input: 'блять',
+          _categoryReasonId: 'mat-amoral',
+          _categoryLabel: 'Мат/Аморал' },
+
+        { name: 'category: insult + mat',
+          group: 'category', input: 'ебаный урод',
+          _categoryReasonId: 'player-insult-mat',
+          _categoryLabel: 'Оскорбление игроков + Мат' },
+
+
+        /* ================================================================
            GROUP: positive
            Verify that normalized/obfuscated/typo forms are recognized.
            If expectedCanonical is set and not in live vocab -> VOCAB_MISSING.
@@ -182,6 +334,18 @@
 
         { name: 'positive: digit lookalike 0->о',
           group: 'positive', input: 'пид0р',
+          expectedRecognized: true,
+          expectedMethod: ['normalized', 'exact'],
+          expectedLevel:  ['trusted'] },
+
+        { name: 'positive: wrong layout gbljh -> пидор',
+          group: 'positive', input: 'gbljh',
+          expectedRecognized: true,
+          expectedMethod: ['normalized', 'layout', 'exact'],
+          expectedLevel:  ['trusted'] },
+
+        { name: 'positive: zero-width separator',
+          group: 'positive', input: 'п\u200b-и-д-о-р',
           expectedRecognized: true,
           expectedMethod: ['normalized', 'exact'],
           expectedLevel:  ['trusted'] },
@@ -261,6 +425,25 @@
         { name: 'negative: окно',    group: 'negative', input: 'окно',    expectedRecognized: false },
         { name: 'negative: машина',  group: 'negative', input: 'машина',  expectedRecognized: false },
         { name: 'negative: сегодня', group: 'negative', input: 'сегодня', expectedRecognized: false },
+        { name: 'negative: hello',    group: 'negative', input: 'hello',    expectedRecognized: false },
+        { name: 'negative: привет всем', group: 'negative', input: 'привет всем', expectedRecognized: false },
+        { name: 'negative: hello world', group: 'negative', input: 'hello world', expectedRecognized: false },
+        { name: 'negative: minecraft server', group: 'negative', input: 'minecraft server', expectedRecognized: false },
+        { name: 'negative: player123', group: 'negative', input: 'player123', expectedRecognized: false },
+        { name: 'negative: numbers only', group: 'negative', input: '123 456 7890', expectedRecognized: false },
+        { name: 'negative: punctuation only', group: 'negative', input: '!!! ??? ...', expectedRecognized: false },
+        { name: 'negative: harmless family', group: 'negative', input: 'моя мама дома', expectedRecognized: false },
+        { name: 'negative: harmless slang', group: 'negative', input: 'братан как дела', expectedRecognized: false },
+        { name: 'negative: benign mixed script', group: 'negative', input: 'pрiвет', expectedRecognized: false },
+        { name: 'negative: safe layout-like', group: 'negative', input: 'ghbdtn all', expectedRecognized: false },
+        { name: 'negative: dangerous substring word', group: 'negative', input: 'херобрин', expectedRecognized: false },
+        { name: 'negative: legitimate doubles', group: 'negative', input: 'классный сервер', expectedRecognized: false },
+        { name: 'negative: short token', group: 'negative', input: 'ок', expectedRecognized: false },
+        { name: 'negative: username style', group: 'negative', input: 'A1exR_', expectedRecognized: false },
+        { name: 'negative: minecraft terms', group: 'negative', input: 'крипер и зомби', expectedRecognized: false },
+        { name: 'negative: ascii slang', group: 'negative', input: 'lol gg wp', expectedRecognized: false },
+        { name: 'negative: benign typo-like', group: 'negative', input: 'привед всем', expectedRecognized: false },
+        { name: 'negative: repeated benign letters', group: 'negative', input: 'сссервис', expectedRecognized: false },
 
 
         /* ================================================================
@@ -369,6 +552,153 @@
             };
         }
 
+        /* ---- Alias group ---- */
+        if (tc.group === 'alias') {
+            const matches = findAliasMatches(tc.input);
+
+            if (!matches.length) {
+                return {
+                    ...base,
+                    status: STATUS.FAIL,
+                    reason: 'alias-not-found',
+                    failures: ['expected built-in alias match, got none']
+                };
+            }
+
+            const match = matches[0];
+            const failures = [];
+
+            if (tc._aliasReasonId && match.reasonId !== tc._aliasReasonId) {
+                failures.push(
+                    `reasonId: expected "${tc._aliasReasonId}", got "${match.reasonId}"`
+                );
+            }
+
+            if (tc._aliasCategory && match.category !== tc._aliasCategory) {
+                failures.push(
+                    `category: expected "${tc._aliasCategory}", got "${match.category}"`
+                );
+            }
+
+            return {
+                ...base,
+                result: {
+                    id: match.id,
+                    canonical: match.canonical,
+                    category: match.category,
+                    reasonId: match.reasonId,
+                    confidence: match.confidence,
+                    matchedText: match.matchedText ?? match.alias ?? match.canonical,
+                    matchType: match.matchType ?? 'alias'
+                },
+                status: failures.length === 0 ? STATUS.PASS : STATUS.FAIL,
+                failures,
+                reason: null
+            };
+        }
+
+        /* ---- Context group ---- */
+        if (tc.group === 'context') {
+            const result = runContextProbe(tc.input);
+
+            if (!result) {
+                return { ...base, reason: 'context-detector-unavailable' };
+            }
+
+            const failures = [];
+            const detected = Boolean(result.detected);
+
+            if (tc._contextDetected !== undefined && detected !== tc._contextDetected) {
+                failures.push(`detected: expected ${tc._contextDetected}, got ${detected}`);
+            }
+
+            const target = result.target ??
+                result.relatives?.[0]?.target ??
+                result.parentImplications?.[0]?.target ??
+                'unknown';
+
+            if (tc._contextTarget && target !== tc._contextTarget) {
+                failures.push(`target: expected "${tc._contextTarget}", got "${target}"`);
+            }
+
+            return {
+                ...base,
+                result: {
+                    detected,
+                    target,
+                    confidence: result.confidence ?? null,
+                    relativeCount: Array.isArray(result.relatives) ? result.relatives.length : 0,
+                    parentImplicationCount: Array.isArray(result.parentImplications) ? result.parentImplications.length : 0
+                },
+                status: failures.length === 0 ? STATUS.PASS : STATUS.FAIL,
+                failures,
+                reason: null
+            };
+        }
+
+        /* ---- Cross-message group ---- */
+        if (tc.group === 'cross-message') {
+            const result = runCrossMessageProbe(tc._crossMessages);
+
+            if (!result) {
+                return { ...base, reason: 'cross-message-unavailable' };
+            }
+
+            const failures = [];
+            const detected = Array.isArray(result.descriptors) && result.descriptors.length > 0;
+
+            if (tc._crossExpected !== undefined && detected !== tc._crossExpected) {
+                failures.push(`detected: expected ${tc._crossExpected}, got ${detected}`);
+            }
+
+            return {
+                ...base,
+                result: {
+                    detected,
+                    descriptorCount: Array.isArray(result.descriptors) ? result.descriptors.length : 0,
+                    recommendationCount: Array.isArray(result.recommendations) ? result.recommendations.length : 0,
+                    messages: tc._crossMessages
+                },
+                status: failures.length === 0 ? STATUS.PASS : STATUS.FAIL,
+                failures,
+                reason: null
+            };
+        }
+
+        /* ---- Category group ---- */
+        if (tc.group === 'category') {
+            const classification = runCategoryProbe(tc.input);
+
+            if (!classification) {
+                return { ...base, reason: 'category-rules-unavailable' };
+            }
+
+            const failures = [];
+            const reasonId = classification.reason?.reasonId ?? null;
+            const label = classification.reason?.label ?? null;
+
+            if (tc._categoryReasonId && reasonId !== tc._categoryReasonId) {
+                failures.push(`reasonId: expected "${tc._categoryReasonId}", got "${reasonId}"`);
+            }
+
+            if (tc._categoryLabel && label !== tc._categoryLabel) {
+                failures.push(`label: expected "${tc._categoryLabel}", got "${label}"`);
+            }
+
+            return {
+                ...base,
+                result: {
+                    type: classification.type ?? null,
+                    reasonId,
+                    label,
+                    confidence: classification.confidence ?? null
+                },
+                status: failures.length === 0 ? STATUS.PASS : STATUS.FAIL,
+                failures,
+                reason: null
+            };
+        }
+
         /* ---- All recognition groups ---- */
         const result = recognize(tc.input);
 
@@ -385,12 +715,17 @@
         const resultSummary = {
             recognized:     result.recognized,
             canonical:      result.canonical,
+            matchedText:    result.matchedText,
+            source:         result.source,
+            matchType:      result.matchType,
+            reason:         result.reason,
             method:         result.method,
             level:          result.level,
             confidence:     result.confidence,
             distance:       result.distance,
             similarity:     result.similarity,
             normalized:     result.normalized,
+            normalizationCandidates: result.normalizationCandidates ?? [],
             transformCount: result.transformations?.length ?? 0,
             indexMapLen:    result.indexMap?.length ?? 0,
         };
@@ -788,6 +1123,30 @@
             }
 
             console.groupEnd();
+        }
+
+        run() {
+            const exact = buildAndRunExactTests(5);
+            const shouldMatch = [
+                ...this.runGroup('alias'),
+                ...this.runGroup('positive'),
+                ...exact
+            ];
+            const shouldNotMatch = [
+                ...this.runGroup('negative'),
+                ...this.runGroup('near-miss')
+            ];
+            const context = this.runGroup('context');
+            const crossMessage = this.runGroup('cross-message');
+            const category = this.runGroup('category');
+
+            return {
+                shouldMatch: summarizeCases(shouldMatch),
+                shouldNotMatch: summarizeCases(shouldNotMatch),
+                context: summarizeCases(context),
+                crossMessage: summarizeCases(crossMessage),
+                category: summarizeCases(category)
+            };
         }
 
     }

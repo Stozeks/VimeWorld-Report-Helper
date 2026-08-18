@@ -70,6 +70,8 @@
         '0': '\u043e', // о
         '1': '\u0438', // и  (1 used as bypass for и/л; и is more common)
         '3': '\u0437', // з
+        '4': '\u0447', // ч
+        '6': '\u0431', // б
         '@': '\u0430', // а
 
         /* Latin → Cyrillic */
@@ -103,6 +105,35 @@
 
     const ABNORMAL_SPACES_RE =
         /[\u00a0\u2009\u200b\u202f\u2060\ufeff]/g;
+
+    /*
+     * Скрытые символы и комбинирующие знаки.
+     * Удаляем только безопасные маркеры, которые не несут смысла
+     * для модераторского текста.
+     */
+    const INVISIBLE_RE =
+        /[\u200b\u200c\u200d\u2060\ufeff\u00ad]/g;
+
+    const COMBINING_MARK_RE =
+        /[\u0300-\u036f]/g;
+
+    /*
+     * Раскладка QWERTY ↔ ЙЦУКЕН.
+     * Используется только как вспомогательный кандидат.
+     */
+    const QWERTY_TO_CYR = Object.freeze({
+        q: 'й', w: 'ц', e: 'у', r: 'к', t: 'е', y: 'н', u: 'г', i: 'ш', o: 'щ', p: 'з',
+        '[': 'х', ']': 'ъ',
+        a: 'ф', s: 'ы', d: 'в', f: 'а', g: 'п', h: 'р', j: 'о', k: 'л', l: 'д',
+        ';': 'ж', "'": 'э',
+        z: 'я', x: 'ч', c: 'с', v: 'м', b: 'и', n: 'т', m: 'ь'
+    });
+
+    const CYR_TO_QWERTY = Object.freeze(
+        Object.fromEntries(
+            Object.entries(QWERTY_TO_CYR).map(([latin, cyr]) => [cyr, latin])
+        )
+    );
 
 
     /* =========================================================
@@ -185,6 +216,31 @@
         }
 
         return entries;
+    }
+
+    function stripInvisible(text) {
+        return String(text ?? '')
+            .replace(INVISIBLE_RE, '')
+            .replace(COMBINING_MARK_RE, '');
+    }
+
+    function translateLayout(text, map) {
+        let result = '';
+
+        for (const ch of String(text ?? '')) {
+            const lower = ch.toLocaleLowerCase('ru-RU');
+            const mapped = map[lower];
+
+            if (mapped) {
+                result += ch === lower
+                    ? mapped
+                    : mapped.toLocaleUpperCase('ru-RU');
+            } else {
+                result += ch;
+            }
+        }
+
+        return result;
     }
 
     function activeOf(entries) {
@@ -298,7 +354,7 @@
             }
 
             const opts = { ...DEFAULT_OPTIONS, ...options };
-            let s = text;
+            let s = stripInvisible(text);
 
             if (opts.normalizeSpaces) {
                 s = s.replace(ABNORMAL_SPACES_RE, ' ');
@@ -313,6 +369,14 @@
             }
 
             if (opts.removeSeparators) {
+                /*
+                 * Strip [letter] bracket obfuscation before separator
+                 * collapsing: п[и]з[д]а → пизда.
+                 * Brackets wrapping multiple letters (e.g. [VIP]) are
+                 * not affected because the class requires exactly one
+                 * letter inside the brackets.
+                 */
+                s = s.replace(/\[([а-яёa-zA-Z])\]/gi, '$1');
                 s = this._normalizeSepsStr(s, opts);
             }
 
@@ -352,7 +416,7 @@
 
             const opts = { ...DEFAULT_OPTIONS, ...options };
             const transformations = [];
-            const entries = buildEntries(token);
+            const entries = buildEntries(stripInvisible(token));
 
             if (opts.normalizeSpaces) {
                 this._stepSpaceNorm(entries, transformations);
@@ -392,6 +456,30 @@
                 transformations,
                 indexMap,
             };
+        }
+
+        normalizeTokenForms(token, options) {
+            const forms = [];
+            const seen = new Set();
+
+            const pushForm = (kind, value) => {
+                if (!value || seen.has(value)) {
+                    return;
+                }
+
+                seen.add(value);
+                forms.push({
+                    kind,
+                    result: this.normalizeToken(value, options)
+                });
+            };
+
+            const raw = String(token ?? '');
+            pushForm('base', raw);
+            pushForm('qwerty-to-cyr', translateLayout(raw, QWERTY_TO_CYR));
+            pushForm('cyr-to-qwerty', translateLayout(raw, CYR_TO_QWERTY));
+
+            return forms;
         }
 
 
@@ -617,17 +705,19 @@
              *
              * Regex:  L sep L (sep L)+
              *   where L   = Cyrillic or Latin letter (single char)
-             *   and   sep = same non-space separator throughout
+             *   and   sep = same separator throughout
              *               (enforced via backreference \2)
              *
-             * Minimum 3 letters is enforced in the callback.
+             * Separators: . , - _ / \ and single space.
+             * Space is safe here because the backreference enforces
+             * CONSISTENT single-char sep throughout the match, and
+             * each segment between separators must be exactly one
+             * letter — normal multi-letter words cannot trigger this.
              *
-             * Note: space-separated sequences are NOT handled here
-             * because collapsing spaces in a full text string is
-             * not safe.  Use normalizeToken for space-sep detection.
+             * Minimum 3 letters is enforced in the callback.
              */
             return text.replace(
-                /([а-яёa-zA-Z])([-._,])([а-яёa-zA-Z])(?:\2[а-яёa-zA-Z])+/gi,
+                /([а-яёa-zA-Z])([-._,/ \\])([а-яёa-zA-Z])(?:\2[а-яёa-zA-Z])+/gi,
                 (match, _l1, sep) => {
                     const letters = match.split(sep);
                     if (letters.length < opts.minSeparatedLength) {

@@ -6,12 +6,17 @@
   "permissions": [
     "storage"
   ],
+  "host_permissions": [
+    "https://api.vimeworld.com/*",
+    "https://skin.vimeworld.com/*"
+  ],
   "content_scripts": [
     {
       "matches": [
         "https://legacy-cp.vimeworld.com/moder/reports*"
       ],
       "js": [
+        "src/data/recognition-aliases.js",
         "src/data/prohibited-words.js",
         "src/data/violation-rules.js",
         "src/data/prohibited-roots.js",
@@ -20,6 +25,11 @@
         "src/data/relative-abuse-rules.js",
 
         "src/core/dom-adapter.js",
+
+        "src/features/player-identity/player-cache.js",
+        "src/features/player-identity/player-api.js",
+        "src/features/player-identity/player-identity.js",
+        "src/features/player-identity/player-identity-ui.js",
 
         "src/features/message-parser.js",
         "src/features/unified-highlighter.js",
@@ -36,6 +46,7 @@
         "src/features/adaptive-recognition/fuzzy-matcher.js",
         "src/features/adaptive-recognition/recognition-engine.js",
         "src/features/adaptive-recognition/learning-store.js",
+        "src/features/adaptive-recognition/scanner-benchmark.js",
         "src/features/adaptive-recognition/recognition-test-harness.js",
 
         "src/ui/stats-panel.js",

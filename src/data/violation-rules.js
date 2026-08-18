@@ -625,8 +625,6 @@
         'блядюга',
         'блядища',
 
-        'шлюха',
-        'шлюшка',
         'шалава',
 
 
@@ -671,8 +669,6 @@
          * ENGLISH
          */
 
-        'motherfucker',
-
         'fuckface',
 
         'fuckhead',
@@ -681,13 +677,9 @@
 
         'cocksucker',
 
-        'asshole',
-
         'shithead',
 
         'bastard',
-
-        'bitch',
 
         'cunt',
 
@@ -737,6 +729,21 @@
 
 
     function normalize(value) {
+        const normalizer =
+            window.VimeReportTextNormalizer;
+
+        if (
+            normalizer &&
+            typeof normalizer.normalize === 'function'
+        ) {
+            try {
+                return normalizer.normalize(
+                    String(value ?? '')
+                );
+            } catch (_) {
+                // fallback ниже
+            }
+        }
 
         return String(
             value ?? ''
@@ -754,6 +761,25 @@
             )
 
             .trim();
+    }
+
+
+    function getBuiltInRecognitionAliases() {
+        return window.VimeReportRecognitionAliases ?? null;
+    }
+
+
+    function findRecognitionAliasMatches(text) {
+        const aliases = getBuiltInRecognitionAliases();
+
+        if (
+            !aliases ||
+            typeof aliases.findMatches !== 'function'
+        ) {
+            return [];
+        }
+
+        return aliases.findMatches(text);
     }
 
 
@@ -815,12 +841,29 @@
         }
 
 
-        return dictionary.filter(
-            (word) =>
-                normalizedText.includes(
-                    word
-                )
-        );
+        return dictionary.filter((word) => {
+            const normalizedWord =
+                normalize(word);
+
+            if (!normalizedWord) {
+                return false;
+            }
+
+            const escaped =
+                normalizedWord.replace(
+                    /[.*+?^${}()|[\]\\]/g,
+                    '\\$&'
+                );
+
+            const pattern = new RegExp(
+                `(^|[^a-zа-яё0-9_])(${escaped})`,
+                'i'
+            );
+
+            return pattern.test(
+                normalizedText
+            );
+        });
     }
 
 
@@ -987,6 +1030,176 @@
             };
         }
 
+
+        const aliasMatches =
+            findRecognitionAliasMatches(
+                text
+            );
+
+
+        if (
+            aliasMatches.length > 0
+        ) {
+
+            const matchByPriority =
+                aliasMatches.find(
+                    (item) =>
+                        item.category === 'INSULT_MAT'
+                ) ||
+                aliasMatches.find(
+                    (item) =>
+                        item.category === 'INSULT'
+                ) ||
+                aliasMatches.find(
+                    (item) =>
+                        item.category === 'MAT'
+                ) ||
+                aliasMatches[0];
+
+
+            if (matchByPriority) {
+                const reason =
+                    matchByPriority.category === 'INSULT_MAT'
+                        ? REASON_BY_TYPE.INSULT_MAT
+                        : matchByPriority.category === 'INSULT'
+                            ? REASON_BY_TYPE.INSULT
+                            : REASON_BY_TYPE.MAT;
+
+                return {
+                    type:
+                        matchByPriority.category === 'INSULT_MAT'
+                            ? TYPE.INSULT_MAT
+                            : matchByPriority.category === 'INSULT'
+                                ? TYPE.INSULT
+                                : TYPE.MAT,
+
+                    reason,
+
+                    confidence:
+                        typeof matchByPriority.confidence === 'number' &&
+                        matchByPriority.confidence >= 0.95
+                            ? 'high'
+                            : typeof matchByPriority.confidence === 'number' &&
+                              matchByPriority.confidence >= 0.85
+                                ? 'medium'
+                                : 'low',
+
+                    matches:
+                        aliasMatches.map(
+                            (item) => item.alias || item.canonical
+                        )
+                };
+            }
+        }
+
+
+        /*
+         * Compact-key fallback.
+         *
+         * Covers multi-char or inconsistent separator patterns that
+         * _normalizeSepsStr cannot collapse via its backreference rule:
+         *   "п - и - з - д - а" → "пизда"
+         *   "х . у . й"         → "хуй"
+         *   "п  и  з  д  а"     → "пизда"  (double-space)
+         *
+         * Safety guards:
+         *   1. Only triggers when non-letter chars were actually
+         *      stripped (compact ≠ normalized), so plain text skips
+         *      this path entirely.
+         *   2. Minimum compact length 3 — avoids single-char noise.
+         *   3. findMatches uses word-boundary prefix pattern, so a
+         *      prohibited root must appear at the start of the compact
+         *      string or after a non-word char — concatenated word
+         *      runs where a prohibited root lands mid-interior are
+         *      not matched.
+         */
+        const normalizedForCompact =
+            normalize(text);
+
+        const compactText =
+            normalizedForCompact.replace(
+                /[^а-яёa-z0-9]+/gi,
+                ''
+            );
+
+        if (
+            compactText.length >= 3 &&
+            compactText !== normalizedForCompact
+        ) {
+
+            const cInsultMat =
+                findMatches(compactText, DATABASE.INSULT_MAT);
+
+            if (cInsultMat.length > 0) {
+                return {
+                    type:       TYPE.INSULT_MAT,
+                    reason:     REASON_BY_TYPE.INSULT_MAT,
+                    confidence: 'medium',
+                    matches:    cInsultMat
+                };
+            }
+
+            const cInsult = findMatches(compactText, DATABASE.INSULT);
+            const cMat    = findMatches(compactText, DATABASE.MAT);
+
+            if (cInsult.length > 0 && cMat.length > 0) {
+                return {
+                    type:       TYPE.INSULT_MAT,
+                    reason:     REASON_BY_TYPE.INSULT_MAT,
+                    confidence: 'medium',
+                    matches:    [...cInsult, ...cMat]
+                };
+            }
+
+            if (cInsult.length > 0) {
+                return {
+                    type:       TYPE.INSULT,
+                    reason:     REASON_BY_TYPE.INSULT,
+                    confidence: 'medium',
+                    matches:    cInsult
+                };
+            }
+
+            if (cMat.length > 0) {
+                return {
+                    type:       TYPE.MAT,
+                    reason:     REASON_BY_TYPE.MAT,
+                    confidence: 'medium',
+                    matches:    cMat
+                };
+            }
+        }
+
+        // Digit-stripped variant: digits used as noise separators between letters
+        // (e.g. "п0-и-з-д-а"). The LOOKALIKE_MAP converts some digits to Cyrillic
+        // letters (0→о, 1→и, 3→з) before separator collapse, which corrupts the
+        // reconstructed form. Stripping digits first and re-normalizing produces the
+        // clean candidate. Only triggers when digits are present AND stripping changes
+        // the normalized form (guards against ordinary numbered messages).
+        if (/[0-9]/.test(text)) {
+            const digitStripped     = text.replace(/[0-9]/g, '');
+            const normDigitStripped = normalize(digitStripped);
+
+            if (normDigitStripped && normDigitStripped !== normalizedForCompact) {
+                const dsInsultMat = findMatches(normDigitStripped, DATABASE.INSULT_MAT);
+                if (dsInsultMat.length > 0) {
+                    return { type: TYPE.INSULT_MAT, reason: REASON_BY_TYPE.INSULT_MAT, confidence: 'medium', matches: dsInsultMat };
+                }
+
+                const dsInsult = findMatches(normDigitStripped, DATABASE.INSULT);
+                const dsMat    = findMatches(normDigitStripped, DATABASE.MAT);
+
+                if (dsInsult.length > 0 && dsMat.length > 0) {
+                    return { type: TYPE.INSULT_MAT, reason: REASON_BY_TYPE.INSULT_MAT, confidence: 'medium', matches: [...dsInsult, ...dsMat] };
+                }
+                if (dsInsult.length > 0) {
+                    return { type: TYPE.INSULT, reason: REASON_BY_TYPE.INSULT, confidence: 'medium', matches: dsInsult };
+                }
+                if (dsMat.length > 0) {
+                    return { type: TYPE.MAT, reason: REASON_BY_TYPE.MAT, confidence: 'medium', matches: dsMat };
+                }
+            }
+        }
 
         return null;
     }

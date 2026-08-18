@@ -83,10 +83,24 @@
                 ];
 
 
+            const builtInAliases =
+                window.VimeReportRecognitionAliases
+                    ?.getDictionaryWords?.() ?? [];
+
+            const mergedWords =
+                [
+                    ...new Set(
+                        [
+                            ...uniqueWords,
+                            ...builtInAliases
+                        ]
+                    )
+                ];
+
             prohibitedWords.splice(
                 0,
                 prohibitedWords.length,
-                ...uniqueWords
+                ...mergedWords
             );
 
 
@@ -98,6 +112,13 @@
                 '[Vime Report Helper] Prohibited Words loaded:',
                 prohibitedWords.length
             );
+
+            if (builtInAliases.length > 0) {
+                console.log(
+                    '[Vime Report Helper] Built-in recognition aliases merged:',
+                    builtInAliases.length
+                );
+            }
 
         } catch (error) {
             window.VimeReportProhibitedWordsReady =

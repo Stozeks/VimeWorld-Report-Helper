@@ -153,8 +153,9 @@
                  * Кириллица ↔ похожая латиница
                  */
 
-                'а': '[аa]',
-                'a': '[аa]',
+                'а': '[аa@]',
+                'a': '[аa@]',
+                '@': '[аa@]',
 
                 'в': '[вb]',
                 'b': '[вb]',
@@ -175,6 +176,11 @@
                 'o': '[оo0]',
                 '0': '[оo0]',
 
+                'и': '[иi1!|]',
+                'i': '[иi1!|]',
+                'l': '[лl1|]',
+                '1': '[иi1!|лl]',
+
                 'р': '[рp]',
                 'p': '[рp]',
 
@@ -188,7 +194,16 @@
                 'x': '[хx]',
 
                 'у': '[уy]',
-                'y': '[уy]'
+                'y': '[уy]',
+
+                'з': '[з3]',
+                '3': '[з3]',
+
+                'ч': '[ч4]',
+                '4': '[ч4]',
+
+                'б': '[б6]',
+                '6': '[б6]'
             };
 
 
@@ -253,7 +268,7 @@
              * разные части сообщения.
              */
             const separator =
-                '[\\s.,\\-_*~\\\\/]{0,3}';
+                '[\\s\\u00a0\\u200b\\u200c\\u200d\\u2060\\ufeff.,\\-_*~\\\\/:;\'"\\+=|(){}\\[\\]<>!?0-9]{0,3}';
 
 
             const characters =
@@ -1365,6 +1380,227 @@
         }
 
 
+        /*
+         * =====================================================
+         * CROSS-MESSAGE BUILTIN KNOWLEDGE
+         * =====================================================
+         *
+         * Ловит подтверждённые фразы, которые могли быть
+         * разбиты между соседними сообщениями.
+         *
+         * Мы не склеиваем весь лог целиком — только короткое
+         * окно соседних сообщений, чтобы не раздувать false
+         * positives и не терять производительность.
+         * =====================================================
+         */
+        _buildCrossMessageKnowledge(messages, prohibitedWords) {
+            const EMPTY = {
+                descriptors: [],
+                recommendations: []
+            };
+
+            const aliases =
+                window.VimeReportRecognitionAliases;
+
+            if (
+                !aliases ||
+                typeof aliases.findMatches !== 'function'
+            ) {
+                return EMPTY;
+            }
+
+            if (!Array.isArray(messages) || messages.length < 2) {
+                return EMPTY;
+            }
+
+            const builtInWords =
+                aliases.getDictionaryWords?.() ?? [];
+
+            const allWords = [
+                ...new Set(
+                    [
+                        ...prohibitedWords,
+                        ...builtInWords
+                    ].map((entry) =>
+                        typeof entry === 'string'
+                            ? entry
+                            : entry?.word
+                    ).filter(Boolean)
+                )
+            ];
+
+            const descriptors = [];
+            const recommendationCounts = new Map();
+
+            for (let i = 0; i < messages.length - 1; i++) {
+                for (let span = 2; span <= 3; span++) {
+                    if (i + span > messages.length) {
+                        continue;
+                    }
+
+                    const windowMessages = messages.slice(i, i + span);
+
+                    if (
+                        windowMessages.some((message) =>
+                            !message ||
+                            typeof message.text !== 'string'
+                        )
+                    ) {
+                        continue;
+                    }
+
+                    const authors = windowMessages.map((message) =>
+                        String(
+                            message.author ??
+                            message.username ??
+                            message.sender ??
+                            ''
+                        ).trim()
+                    );
+
+                    if (
+                        authors.some((author) => !author)
+                    ) {
+                        continue;
+                    }
+
+                    const sameAuthor =
+                        authors.every(
+                            (author) =>
+                                author === authors[0]
+                        );
+
+                    if (!sameAuthor) {
+                        continue;
+                    }
+
+                    const combinedText =
+                        windowMessages
+                            .map((message) => message.text)
+                            .join(' ');
+
+                    const segments = [];
+                    let offset = 0;
+
+                    windowMessages.forEach((message) => {
+                        segments.push({
+                            messageIndex: message.index,
+                            start: offset,
+                            end: offset + message.text.length
+                        });
+                        offset += message.text.length + 1;
+                    });
+
+                    const matches = [];
+                    const aliasMatches = aliases.findMatches(combinedText);
+                    const primaryAliasMatch = aliasMatches[0] ?? null;
+
+                    for (const word of allWords) {
+                        if (typeof word !== 'string' || !word.trim()) {
+                            continue;
+                        }
+
+                        const normalRegex = this.buildRegex(word, false, 'word');
+                        let match = normalRegex?.exec(combinedText) ?? null;
+                        let matchMode = 'word';
+
+                        if (!match) {
+                            const bypassRegex = this.buildBypassRegex(word, false);
+                            match = bypassRegex?.exec(combinedText) ?? null;
+
+                            if (match) {
+                                matchMode = 'bypass';
+                            }
+                        }
+
+                        if (!match) {
+                            continue;
+                        }
+
+                        const matchedText = match[2] ?? match[1] ?? match[0];
+
+                        matches.push({
+                            index: match.index,
+                            length: matchedText.length,
+                            text: matchedText,
+                            word,
+                            matchMode
+                        });
+                    }
+                    let countedWindow = false;
+
+                matches.forEach((match) => {
+                    const matchStart = match.index;
+                    const matchEnd = match.index + match.length;
+                    const touchedSegments = segments.filter((segment) =>
+                        segment.start < matchEnd &&
+                        segment.end > matchStart
+                    );
+
+                    if (touchedSegments.length < 2) {
+                        return;
+                    }
+
+                    touchedSegments.forEach((segment) => {
+                        const localStart = Math.max(0, matchStart - segment.start);
+                        const localEnd = Math.min(
+                            segment.end - segment.start,
+                            matchEnd - segment.start
+                        );
+
+                        if (localEnd <= localStart) {
+                            return;
+                        }
+
+                        descriptors.push({
+                            messageIndex: segment.messageIndex,
+                            start: localStart,
+                            end: localEnd,
+                            cssClass:
+                                window.VimeReportUnifiedHighlighter?.CSS_CLASSES?.VIOLATION ??
+                                'vrh-hl-violation',
+                            priority:
+                                window.VimeReportUnifiedHighlighter?.PRIORITY?.VIOLATION ??
+                                40,
+                            _meta: {
+                                source: 'cross-message',
+                                originalToken: match.text,
+                                aliasId: primaryAliasMatch?.id ?? null,
+                                category: primaryAliasMatch?.category ?? null,
+                                reasonId: primaryAliasMatch?.reasonId ?? null
+                            }
+                        });
+                    });
+
+                    if (!countedWindow) {
+                        countedWindow = true;
+
+                        aliasMatches.forEach((aliasMatch) => {
+                            if (!aliasMatch?.reasonId) {
+                                return;
+                            }
+
+                            const current = recommendationCounts.get(aliasMatch.reasonId) || {
+                                reasonId: aliasMatch.reasonId,
+                                label: aliasMatch.label,
+                                count: 0
+                            };
+
+                            current.count++;
+                            recommendationCounts.set(aliasMatch.reasonId, current);
+                        });
+                    }
+                });
+                }
+            }
+
+            return {
+                descriptors,
+                recommendations: [...recommendationCounts.values()]
+            };
+        }
+
+
         _isRangeCovered(
             start,
             end,
@@ -2270,6 +2506,48 @@
             const _t7 = performance.now();
 
 
+            const crossMessageKnowledge =
+                this._buildCrossMessageKnowledge(
+                    messages,
+                    prohibitedWords
+                );
+
+            if (crossMessageKnowledge.descriptors.length) {
+                this._lastViolationDescriptors.push(
+                    ...crossMessageKnowledge.descriptors
+                );
+            }
+
+            if (crossMessageKnowledge.recommendations.length) {
+                const recommendationMap = new Map(
+                    this.lastRecommendations.map((item) => [
+                        item.reasonId,
+                        { ...item }
+                    ])
+                );
+
+                crossMessageKnowledge.recommendations.forEach((item) => {
+                    const current = recommendationMap.get(item.reasonId);
+
+                    if (current) {
+                        current.count += item.count;
+                        recommendationMap.set(item.reasonId, current);
+                        return;
+                    }
+
+                    recommendationMap.set(item.reasonId, {
+                        reasonId: item.reasonId,
+                        label: item.label,
+                        count: item.count,
+                        examples: []
+                    });
+                });
+
+                this.lastRecommendations = [
+                    ...recommendationMap.values()
+                ];
+            }
+
             /*
              * When the Relative Abuse integration is active it
              * will apply ALL descriptors (violation + relative)
@@ -2323,6 +2601,10 @@
                 adaptiveDescriptors.length
             );
 
+            console.log(
+                'Cross-message detections:',
+                crossMessageKnowledge.descriptors.length
+            );
 
             console.log(
                 'Recommendations:',

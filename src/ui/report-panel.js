@@ -746,6 +746,9 @@
 
             this.lastScanResults =
                 [];
+
+            this.userClosedForReportId =
+                null;
         }
 
 
@@ -777,6 +780,8 @@
 
             panel.className =
                 'vrh-panel';
+
+            panel.hidden = true;
 
 
             panel.innerHTML = `
@@ -1413,6 +1418,7 @@
                     this.lastScanResults
                 );
                 this.updateCapsRecommendation();
+                this.updateViolationRecommendation();
 
             } catch (error) {
                 console.error(
@@ -1774,6 +1780,50 @@
         }
 
 
+        /*
+         * Apply vrh-reason--recommended to the violation tile that
+         * best matches the scanner's current recommendation.
+         *
+         * Caps-lock, flood and flood-symbols tiles are managed by
+         * separate systems and are intentionally excluded here.
+         */
+        updateViolationRecommendation() {
+            const SKIP_IDS = new Set([
+                'caps-lock',
+                'flood',
+                'flood-symbols'
+            ]);
+
+            // Clear recommendation highlight from all violation tiles.
+            this.panel
+                ?.querySelectorAll('[data-reason-id]')
+                .forEach((btn) => {
+                    if (!SKIP_IDS.has(btn.dataset.reasonId)) {
+                        btn.classList.remove('vrh-reason--recommended');
+                    }
+                });
+
+            const scanner =
+                window.VimeReportViolationScanner;
+
+            const recommendation =
+                scanner?.getBestRecommendation?.();
+
+            if (!recommendation?.reasonId) {
+                return;
+            }
+
+            const button =
+                this.panel?.querySelector(
+                    `[data-reason-id="${recommendation.reasonId}"]`
+                );
+
+            if (button) {
+                button.classList.add('vrh-reason--recommended');
+            }
+        }
+
+
         toggleScanDetails(results) {
             const existing =
                 this.panel?.querySelector(
@@ -2127,6 +2177,17 @@
                 button.disabled =
                     this.mode !== 'report';
             }
+
+            // Clear any violation recommendation tile highlight set by
+            // the most recent scan (caps-lock and flood are managed elsewhere).
+            const SKIP_IDS = new Set(['caps-lock', 'flood', 'flood-symbols']);
+            this.panel
+                ?.querySelectorAll('[data-reason-id]')
+                .forEach((btn) => {
+                    if (!SKIP_IDS.has(btn.dataset.reasonId)) {
+                        btn.classList.remove('vrh-reason--recommended');
+                    }
+                });
         }
 
 
@@ -3489,6 +3550,9 @@
             this.mode =
                 'report';
 
+            this.userClosedForReportId =
+                null;
+
 
             this.update(
                 report
@@ -3508,6 +3572,9 @@
                 .add(
                     'vrh-panel--visible'
                 );
+
+            this.panel.hidden =
+                false;
         }
 
 
@@ -3523,6 +3590,8 @@
                 this.currentReport =
                     null;
 
+                this.userClosedForReportId =
+                    null;
 
                 this.mountToBody();
 
@@ -3556,6 +3625,9 @@
 
 
                 this.updateModeUI();
+
+                this.panel.hidden =
+                    true;
             }
         }
 
@@ -3578,6 +3650,9 @@
 
             this.mode =
                 'manual';
+
+            this.userClosedForReportId =
+                null;
 
 
             this.currentReport =
@@ -3615,6 +3690,9 @@
                 .add(
                     'vrh-panel--visible'
                 );
+
+            this.panel.hidden =
+                false;
         }
 
 
@@ -3623,16 +3701,31 @@
            ===================================================== */
 
         hide() {
+            if (
+                this.mode === 'report' &&
+                this.currentReport?.id
+            ) {
+                this.userClosedForReportId =
+                    this.currentReport.id;
+            }
+
             this.panel
                 ?.classList
                 .remove(
                     'vrh-panel--visible'
                 );
+
+            if (this.panel) {
+                this.panel.hidden =
+                    true;
+            }
         }
 
 
         isVisible() {
             return Boolean(
+                this.panel &&
+                !this.panel.hidden &&
                 this.panel?.classList.contains(
                     'vrh-panel--visible'
                 )
@@ -3660,10 +3753,42 @@
                     value;
             }
         }
+
+        debug() {
+            const panel =
+                this.panel;
+
+            const computed =
+                panel
+                    ? window.getComputedStyle(panel)
+                    : null;
+
+            return {
+                activeReportId: this.currentReport?.id ?? null,
+                reportDomPresent: Boolean(
+                    window.VimeReportDomAdapter?.isReportOpen?.()
+                ),
+                panelExists: Boolean(panel),
+                panelVisible: this.isVisible(),
+                hiddenProperty: Boolean(panel?.hidden),
+                hasVisibleClass: Boolean(
+                    panel?.classList.contains('vrh-panel--visible')
+                ),
+                panelMode: this.mode,
+                userClosedForReportId: this.userClosedForReportId ?? null,
+                computedDisplay: computed?.display ?? null,
+                computedVisibility: computed?.visibility ?? null,
+                computedOpacity: computed?.opacity ?? null,
+                pointerEvents: computed?.pointerEvents ?? null
+            };
+        }
     }
 
 
     window.VimeReportPanel =
         new VimeReportPanel();
+
+    window.VimeReportPanelDebug =
+        () => window.VimeReportPanel.debug();
 
 })();
