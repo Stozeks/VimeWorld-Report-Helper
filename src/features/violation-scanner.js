@@ -2416,6 +2416,265 @@
                     messages
                 );
 
+            /*
+ * =========================================================
+ * OFFICIAL SCANNER -> REASON CATEGORY BRIDGE
+ * =========================================================
+ *
+ * Обычный prohibited-words Scanner уже нашёл нарушения
+ * и положил их в this.lastResults.
+ *
+ * Теперь определяем категорию каждого найденного слова:
+ *
+ * INSULT
+ *      -> Оскорбление игроков
+ *
+ * MAT / AMORAL
+ *      -> Мат/Аморал
+ *
+ * INSULT + MAT в одном сообщении
+ *      -> Оскорбление игроков + Мат
+ *
+ * Важно:
+ * здесь нет хардкода конкретного слова.
+ * Категорию определяет RecognitionAliases.
+ * =========================================================
+ */
+
+            {
+                const recognition =
+                    window.VimeReportRecognitionAliases;
+
+
+                if (
+                    recognition &&
+                    typeof recognition.getCategoryForWord ===
+                    'function'
+                ) {
+
+                    /*
+                     * Сначала группируем найденные категории
+                     * по конкретному сообщению.
+                     */
+                    const categoriesByMessage =
+                        new Map();
+
+
+                    this.lastResults.forEach(
+                        (match) => {
+
+                            const category =
+                                recognition.getCategoryForWord(
+                                    match.word ??
+                                    match.matchedText
+                                );
+
+
+                            if (
+                                !category
+                            ) {
+                                return;
+                            }
+
+
+                            if (
+                                !categoriesByMessage.has(
+                                    match.messageIndex
+                                )
+                            ) {
+                                categoriesByMessage.set(
+                                    match.messageIndex,
+                                    new Set()
+                                );
+                            }
+
+
+                            categoriesByMessage
+                                .get(
+                                    match.messageIndex
+                                )
+                                .add(
+                                    category
+                                );
+                        }
+                    );
+
+
+                    /*
+                     * Берём уже существующие рекомендации,
+                     * чтобы ничего не потерять.
+                     */
+                    const recommendationMap =
+                        new Map(
+                            this.lastRecommendations.map(
+                                (item) => [
+                                    item.reasonId,
+                                    { ...item }
+                                ]
+                            )
+                        );
+
+
+                    const addRecommendation =
+                        (
+                            reasonId,
+                            label,
+                            messageIndex
+                        ) => {
+
+                            const current =
+                                recommendationMap.get(
+                                    reasonId
+                                );
+
+
+                            if (
+                                current
+                            ) {
+                                current.count =
+                                    (
+                                        current.count ??
+                                        0
+                                    ) + 1;
+
+                                recommendationMap.set(
+                                    reasonId,
+                                    current
+                                );
+
+                                return;
+                            }
+
+
+                            recommendationMap.set(
+                                reasonId,
+                                {
+                                    reasonId,
+
+                                    label,
+
+                                    count:
+                                        1,
+
+                                    examples: [
+                                        {
+                                            source:
+                                                'official-scanner-category',
+
+                                            messageIndex
+                                        }
+                                    ]
+                                }
+                            );
+                        };
+
+
+                    categoriesByMessage.forEach(
+                        (
+                            categories,
+                            messageIndex
+                        ) => {
+
+                            const hasInsultMat =
+                                categories.has(
+                                    'INSULT_MAT'
+                                );
+
+
+                            const hasInsult =
+                                categories.has(
+                                    'INSULT'
+                                );
+
+
+                            const hasMat =
+                                categories.has(
+                                    'MAT'
+                                );
+
+
+                            const hasAmoral =
+                                categories.has(
+                                    'AMORAL'
+                                );
+
+
+                            /*
+                             * Готовая категория INSULT_MAT.
+                             */
+                            if (
+                                hasInsultMat
+                            ) {
+
+                                addRecommendation(
+                                    'player-insult-mat',
+                                    'Оскорбление игроков + Мат',
+                                    messageIndex
+                                );
+                            }
+
+
+                            /*
+                             * Если в ОДНОМ сообщении отдельно нашли
+                             * оскорбление и мат — это тоже
+                             * Оскорбление игроков + Мат.
+                             */
+                            if (
+                                hasInsult &&
+                                hasMat
+                            ) {
+
+                                addRecommendation(
+                                    'player-insult-mat',
+                                    'Оскорбление игроков + Мат',
+                                    messageIndex
+                                );
+                            }
+
+
+                            /*
+                             * Обычное оскорбление сохраняем отдельно.
+                             *
+                             * Поэтому если в другом сообщении просто
+                             * "бомж", зелёная плитка тоже загорится.
+                             */
+                            if (
+                                hasInsult
+                            ) {
+
+                                addRecommendation(
+                                    'player-insult',
+                                    'Оскорбление игроков',
+                                    messageIndex
+                                );
+                            }
+
+
+                            /*
+                             * Мат/Аморал сохраняем отдельно.
+                             */
+                            if (
+                                hasMat ||
+                                hasAmoral
+                            ) {
+
+                                addRecommendation(
+                                    'mat-amoral',
+                                    'Мат/Аморал',
+                                    messageIndex
+                                );
+                            }
+                        }
+                    );
+
+
+                    this.lastRecommendations =
+                        [
+                            ...recommendationMap.values()
+                        ];
+                }
+            }
+
             const _t3 = performance.now();
 
 
@@ -2465,25 +2724,230 @@
                 this.lastResults.push(
                     ...learned.matches
                 );
+
+
+                /*
+                 * =========================================================
+                 * LEARNED RECOMMENDATIONS
+                 * =========================================================
+                 *
+                 * Обученные алиасы и фразы уже знают свою category.
+                 * Здесь превращаем эти категории в рекомендации плиток.
+                 *
+                 * INSULT
+                 *      -> player-insult
+                 *
+                 * MAT / AMORAL
+                 *      -> mat-amoral
+                 *
+                 * INSULT_MAT
+                 *      -> player-insult-mat
+                 * =========================================================
+                 */
+
+
+                const learnedRecommendationMap =
+                    new Map(
+                        this.lastRecommendations.map(
+                            (item) => [
+                                item.reasonId,
+                                { ...item }
+                            ]
+                        )
+                    );
+
+
+                const learnedCategoryMap =
+                    {
+                        INSULT: {
+                            reasonId:
+                                'player-insult',
+
+                            label:
+                                'Оскорбление игроков'
+                        },
+
+                        PLAYER_INSULT: {
+                            reasonId:
+                                'player-insult',
+
+                            label:
+                                'Оскорбление игроков'
+                        },
+
+                        MAT: {
+                            reasonId:
+                                'mat-amoral',
+
+                            label:
+                                'Мат/Аморал'
+                        },
+
+                        AMORAL: {
+                            reasonId:
+                                'mat-amoral',
+
+                            label:
+                                'Мат/Аморал'
+                        },
+
+                        MAT_AMORAL: {
+                            reasonId:
+                                'mat-amoral',
+
+                            label:
+                                'Мат/Аморал'
+                        },
+
+                        INSULT_MAT: {
+                            reasonId:
+                                'player-insult-mat',
+
+                            label:
+                                'Оскорбление игроков + Мат'
+                        },
+
+                        PLAYER_INSULT_MAT: {
+                            reasonId:
+                                'player-insult-mat',
+
+                            label:
+                                'Оскорбление игроков + Мат'
+                        }
+                    };
+
+
+                learned.matches.forEach(
+                    (match) => {
+
+                        /*
+                         * Ищем соответствующий descriptor,
+                         * потому что именно там Learning Store
+                         * хранит category.
+                         */
+                        const descriptor =
+                            learned.descriptors.find(
+                                (item) =>
+                                    item.messageIndex ===
+                                    match.messageIndex &&
+                                    (
+                                        item._meta?.originalToken ===
+                                        match.matchedText ||
+                                        item._meta?.originalPhrase ===
+                                        match.word
+                                    )
+                            );
+
+
+                        const rawCategory =
+                            descriptor?._meta?.category;
+
+
+                        if (
+                            !rawCategory
+                        ) {
+                            return;
+                        }
+
+
+                        const normalizedCategory =
+                            String(
+                                rawCategory
+                            )
+                                .trim()
+                                .toUpperCase()
+                                .replace(
+                                    /[\s-]+/g,
+                                    '_'
+                                );
+
+
+                        const reason =
+                            learnedCategoryMap[
+                                normalizedCategory
+                                ];
+
+
+                        if (
+                            !reason
+                        ) {
+                            return;
+                        }
+
+
+                        const current =
+                            learnedRecommendationMap.get(
+                                reason.reasonId
+                            );
+
+
+                        if (
+                            current
+                        ) {
+
+                            current.count =
+                                (
+                                    current.count ??
+                                    0
+                                ) + 1;
+
+
+                            learnedRecommendationMap.set(
+                                reason.reasonId,
+                                current
+                            );
+
+
+                            return;
+                        }
+
+
+                        learnedRecommendationMap.set(
+                            reason.reasonId,
+                            {
+                                reasonId:
+                                reason.reasonId,
+
+                                label:
+                                reason.label,
+
+                                count:
+                                    1,
+
+                                examples:
+                                    [
+                                        {
+                                            source:
+                                                'learning-store',
+
+                                            category:
+                                            normalizedCategory,
+
+                                            messageIndex:
+                                            match.messageIndex,
+
+                                            text:
+                                            match.text,
+
+                                            matchedText:
+                                            match.matchedText
+                                        }
+                                    ]
+                            }
+                        );
+                    }
+                );
+
+
+                this.lastRecommendations =
+                    [
+                        ...learnedRecommendationMap.values()
+                    ];
             }
 
             const _t5 = performance.now();
 
 
-            /*
-             * Adaptive Recognition fallback (3-й приоритет).
-             *
-             * Evaluates tokens not already detected by the
-             * exact / bypass scan or learned aliases.
-             * Only trusted/high-confidence results are promoted
-             * to violation descriptors.
-             *
-             * Исключения («Не нарушение») отфильтровываются
-             * методом _filterAdaptiveByExceptions.
-             *
-             * Fail-safe: if the engine is unavailable the array
-             * is empty and no existing behaviour is affected.
-             */
             const rawAdaptiveDescriptors =
                 this._buildAdaptiveDescriptors(
                     messages,
@@ -2505,6 +2969,14 @@
 
             const _t7 = performance.now();
 
+            /*
+ * =========================================================
+ * CROSS-MESSAGE KNOWLEDGE
+ * =========================================================
+ *
+ * Проверяет нарушения, которые могут быть распределены
+ * между несколькими последовательными сообщениями.
+ */
 
             const crossMessageKnowledge =
                 this._buildCrossMessageKnowledge(
@@ -2512,40 +2984,83 @@
                     prohibitedWords
                 );
 
-            if (crossMessageKnowledge.descriptors.length) {
+
+            if (
+                crossMessageKnowledge.descriptors.length
+            ) {
                 this._lastViolationDescriptors.push(
                     ...crossMessageKnowledge.descriptors
                 );
             }
 
-            if (crossMessageKnowledge.recommendations.length) {
-                const recommendationMap = new Map(
-                    this.lastRecommendations.map((item) => [
-                        item.reasonId,
-                        { ...item }
-                    ])
-                );
 
-                crossMessageKnowledge.recommendations.forEach((item) => {
-                    const current = recommendationMap.get(item.reasonId);
+            if (
+                crossMessageKnowledge.recommendations.length
+            ) {
 
-                    if (current) {
-                        current.count += item.count;
-                        recommendationMap.set(item.reasonId, current);
-                        return;
-                    }
+                const recommendationMap =
+                    new Map(
+                        this.lastRecommendations.map(
+                            (item) => [
+                                item.reasonId,
+                                { ...item }
+                            ]
+                        )
+                    );
 
-                    recommendationMap.set(item.reasonId, {
-                        reasonId: item.reasonId,
-                        label: item.label,
-                        count: item.count,
-                        examples: []
-                    });
-                });
 
-                this.lastRecommendations = [
-                    ...recommendationMap.values()
-                ];
+                crossMessageKnowledge
+                    .recommendations
+                    .forEach(
+                        (item) => {
+
+                            const current =
+                                recommendationMap.get(
+                                    item.reasonId
+                                );
+
+
+                            if (
+                                current
+                            ) {
+                                current.count +=
+                                    item.count;
+
+
+                                recommendationMap.set(
+                                    item.reasonId,
+                                    current
+                                );
+
+
+                                return;
+                            }
+
+
+                            recommendationMap.set(
+                                item.reasonId,
+                                {
+                                    reasonId:
+                                    item.reasonId,
+
+                                    label:
+                                    item.label,
+
+                                    count:
+                                    item.count,
+
+                                    examples:
+                                        []
+                                }
+                            );
+                        }
+                    );
+
+
+                this.lastRecommendations =
+                    [
+                        ...recommendationMap.values()
+                    ];
             }
 
             /*

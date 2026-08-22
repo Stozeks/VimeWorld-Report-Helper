@@ -781,6 +781,425 @@
 
         return aliases.findMatches(text);
     }
+    /*
+ * =========================================================
+ * LEARNING STORE CATEGORY MATCHES
+ * =========================================================
+ *
+ * Связывает обученные знания Scanner с классификатором
+ * причин.
+ *
+ * Благодаря этому любое слово / алиас / фраза,
+ * обученная модератором как:
+ *
+ * INSULT
+ * MAT
+ * AMORAL
+ * INSULT_MAT
+ *
+ * автоматически участвует в рекомендации плиток.
+ *
+ * Здесь НЕТ хардкода отдельных слов.
+ * =========================================================
+ */
+
+
+    function normalizeLearnedCategory(
+        category
+    ) {
+
+        const value =
+            String(
+                category ?? ''
+            )
+                .trim()
+                .toUpperCase()
+                .replace(
+                    /[\s-]+/g,
+                    '_'
+                );
+
+
+        /*
+         * Основные категории Learning Store.
+         */
+        if (
+            value === 'INSULT' ||
+            value === 'PLAYER_INSULT'
+        ) {
+            return TYPE.INSULT;
+        }
+
+
+        if (
+            value === 'INSULT_MAT' ||
+            value === 'PLAYER_INSULT_MAT'
+        ) {
+            return TYPE.INSULT_MAT;
+        }
+
+
+        if (
+            value === 'MAT'
+        ) {
+            return TYPE.MAT;
+        }
+
+
+        if (
+            value === 'AMORAL'
+        ) {
+            return TYPE.AMORAL;
+        }
+
+
+        /*
+         * На случай, если в старых данных
+         * вместо category сохранился reasonId.
+         */
+        if (
+            value === 'PLAYER_INSULT'
+        ) {
+            return TYPE.INSULT;
+        }
+
+
+        if (
+            value === 'PLAYER_INSULT_MAT'
+        ) {
+            return TYPE.INSULT_MAT;
+        }
+
+
+        if (
+            value === 'MAT_AMORAL'
+        ) {
+            return TYPE.MAT;
+        }
+
+
+        return null;
+    }
+
+
+    /*
+     * Проверяем, является ли запись Learning Store активной.
+     */
+    function isActiveLearnedEntry(
+        entry
+    ) {
+
+        if (
+            !entry
+        ) {
+            return false;
+        }
+
+
+        const status =
+            String(
+                entry.status ?? ''
+            )
+                .trim()
+                .toLowerCase();
+
+
+        /*
+         * Текущая система Scanner использует
+         * learned / trusted.
+         */
+        return (
+            status === 'learned' ||
+            status === 'trusted'
+        );
+    }
+
+
+    /*
+     * Совпадение отдельного обученного алиаса.
+     *
+     * Используем нормализованный текст и границы слова,
+     * чтобы алиас не срабатывал внутри случайного слова.
+     */
+    function learnedAliasMatchesText(
+        text,
+        entry
+    ) {
+
+        const source =
+            normalize(
+                text
+            );
+
+
+        const alias =
+            normalize(
+                entry?.normalized ??
+                entry?.original ??
+                ''
+            );
+
+
+        if (
+            !source ||
+            !alias
+        ) {
+            return false;
+        }
+
+
+        const escaped =
+            alias.replace(
+                /[.*+?^${}()|[\]\\]/g,
+                '\\$&'
+            );
+
+
+        const pattern =
+            new RegExp(
+                `(^|[^a-zа-яё0-9_])(${escaped})(?=$|[^a-zа-яё0-9_])`,
+                'i'
+            );
+
+
+        return pattern.test(
+            source
+        );
+    }
+
+
+    /*
+     * Совпадение обученной фразы.
+     *
+     * Фразы могут состоять из нескольких слов,
+     * поэтому здесь работаем с нормализованной строкой.
+     */
+    function learnedPhraseMatchesText(
+        text,
+        entry
+    ) {
+
+        const source =
+            normalize(
+                text
+            );
+
+
+        const phrase =
+            normalize(
+                entry?.normalized ??
+                entry?.original ??
+                ''
+            );
+
+
+        if (
+            !source ||
+            !phrase
+        ) {
+            return false;
+        }
+
+
+        return source.includes(
+            phrase
+        );
+    }
+
+
+    /*
+     * Возвращает ВСЕ обученные категории,
+     * присутствующие в конкретном сообщении.
+     */
+    function findLearningStoreMatches(
+        text
+    ) {
+
+        const store =
+            window.VimeReportLearningStore;
+
+
+        if (
+            !store ||
+            store.getStatus?.().ready !== true
+        ) {
+            return [];
+        }
+
+
+        try {
+
+            const aliases =
+                typeof store.findAliases ===
+                'function'
+                    ? store.findAliases()
+                    : [];
+
+
+            const phrases =
+                typeof store.findPhrases ===
+                'function'
+                    ? store.findPhrases()
+                    : [];
+
+
+            const matches =
+                [];
+
+
+            /*
+             * =====================================================
+             * LEARNED ALIASES
+             * =====================================================
+             */
+
+            if (
+                Array.isArray(
+                    aliases
+                )
+            ) {
+
+                aliases.forEach(
+                    (entry) => {
+
+                        if (
+                            !isActiveLearnedEntry(
+                                entry
+                            )
+                        ) {
+                            return;
+                        }
+
+
+                        const category =
+                            normalizeLearnedCategory(
+                                entry.category ??
+                                entry.reasonId
+                            );
+
+
+                        if (
+                            !category
+                        ) {
+                            return;
+                        }
+
+
+                        if (
+                            !learnedAliasMatchesText(
+                                text,
+                                entry
+                            )
+                        ) {
+                            return;
+                        }
+
+
+                        matches.push({
+                            category,
+
+                            value:
+                                entry.original ??
+                                entry.normalized ??
+                                '',
+
+                            source:
+                                'learning-store-alias',
+
+                            id:
+                                entry.id ??
+                                null
+                        });
+                    }
+                );
+            }
+
+
+            /*
+             * =====================================================
+             * LEARNED PHRASES
+             * =====================================================
+             */
+
+            if (
+                Array.isArray(
+                    phrases
+                )
+            ) {
+
+                phrases.forEach(
+                    (entry) => {
+
+                        if (
+                            !isActiveLearnedEntry(
+                                entry
+                            )
+                        ) {
+                            return;
+                        }
+
+
+                        const category =
+                            normalizeLearnedCategory(
+                                entry.category ??
+                                entry.reasonId
+                            );
+
+
+                        if (
+                            !category
+                        ) {
+                            return;
+                        }
+
+
+                        if (
+                            !learnedPhraseMatchesText(
+                                text,
+                                entry
+                            )
+                        ) {
+                            return;
+                        }
+
+
+                        matches.push({
+                            category,
+
+                            value:
+                                entry.original ??
+                                entry.normalized ??
+                                '',
+
+                            source:
+                                'learning-store-phrase',
+
+                            id:
+                                entry.id ??
+                                null
+                        });
+                    }
+                );
+            }
+
+
+            return matches;
+
+        } catch (error) {
+
+            console.warn(
+                '[Vime Report Helper] Violation Rules: Learning Store classification failed:',
+                error
+            );
+
+
+            /*
+             * Fail-safe:
+             * старая классификация продолжает работать.
+             */
+            return [];
+        }
+    }
 
 
     /*
@@ -874,10 +1293,28 @@
      */
 
 
-    function classifyMessage(text) {
+    function classifyMessage(
+        text
+    ) {
 
         /*
-         * Сначала проверяем наиболее специфичную категорию.
+         * =========================================================
+         * ИСТОЧНИКИ ЗНАНИЙ
+         * =========================================================
+         *
+         * 1. Static Violation Rules
+         * 2. Built-in Recognition Aliases
+         * 3. Learning Store
+         *
+         * Все источники участвуют в одной классификации.
+         * =========================================================
+         */
+
+
+        /*
+         * ---------------------------------------------------------
+         * STATIC DATABASE
+         * ---------------------------------------------------------
          */
 
         const insultMatMatches =
@@ -885,28 +1322,6 @@
                 text,
                 DATABASE.INSULT_MAT
             );
-
-
-        if (
-            insultMatMatches.length >
-            0
-        ) {
-
-            return {
-                type:
-                TYPE.INSULT_MAT,
-
-                reason:
-                REASON_BY_TYPE
-                    .INSULT_MAT,
-
-                confidence:
-                    'high',
-
-                matches:
-                insultMatMatches
-            };
-        }
 
 
         const insultMatches =
@@ -923,19 +1338,98 @@
             );
 
 
+        const amoralMatches =
+            findMatches(
+                text,
+                DATABASE.AMORAL
+            );
+
+
         /*
-         * Если в одном сообщении есть
-         * отдельное оскорбление + отдельный мат,
-         *
-         * это тоже:
-         *
-         * Оскорбление игроков + Мат.
+         * ---------------------------------------------------------
+         * BUILT-IN RECOGNITION KNOWLEDGE
+         * ---------------------------------------------------------
          */
 
+        const aliasMatches =
+            findRecognitionAliasMatches(
+                text
+            );
+
+
+        /*
+         * ---------------------------------------------------------
+         * LEARNING STORE
+         * ---------------------------------------------------------
+         */
+
+        const learnedMatches =
+            findLearningStoreMatches(
+                text
+            );
+
+
+        /*
+         * =========================================================
+         * CATEGORY HELPERS
+         * =========================================================
+         */
+
+        const aliasByCategory =
+            (category) =>
+                aliasMatches.filter(
+                    (item) =>
+                        normalizeLearnedCategory(
+                            item?.category ??
+                            item?.reasonId
+                        ) ===
+                        category
+                );
+
+
+        const learnedByCategory =
+            (category) =>
+                learnedMatches.filter(
+                    (item) =>
+                        item.category ===
+                        category
+                );
+
+
+        /*
+         * =========================================================
+         * INSULT + MAT
+         * =========================================================
+         *
+         * Самый высокий приоритет.
+         *
+         * Срабатывает, если:
+         *
+         * - есть готовое слово INSULT_MAT;
+         * - built-in knowledge сказал INSULT_MAT;
+         * - Learning Store сказал INSULT_MAT;
+         * - либо в одном сообщении отдельно присутствуют
+         *   INSULT и MAT.
+         * =========================================================
+         */
+
+
+        const directInsultMat =
+            [
+                ...insultMatMatches,
+
+                ...aliasByCategory(
+                    TYPE.INSULT_MAT
+                ),
+
+                ...learnedByCategory(
+                    TYPE.INSULT_MAT
+                )
+            ];
+
+
         if (
-            insultMatches.length >
-            0 &&
-            matMatches.length >
+            directInsultMat.length >
             0
         ) {
 
@@ -950,16 +1444,91 @@
                 confidence:
                     'high',
 
-                matches: [
-                    ...insultMatches,
-                    ...matMatches
-                ]
+                matches:
+                directInsultMat
             };
         }
 
 
+        /*
+         * =========================================================
+         * СОБИРАЕМ ВСЕ INSULT
+         * =========================================================
+         */
+
+        const allInsults =
+            [
+                ...insultMatches,
+
+                ...aliasByCategory(
+                    TYPE.INSULT
+                ),
+
+                ...learnedByCategory(
+                    TYPE.INSULT
+                )
+            ];
+
+
+        /*
+         * =========================================================
+         * СОБИРАЕМ ВЕСЬ MAT
+         * =========================================================
+         */
+
+        const allMat =
+            [
+                ...matMatches,
+
+                ...aliasByCategory(
+                    TYPE.MAT
+                ),
+
+                ...learnedByCategory(
+                    TYPE.MAT
+                )
+            ];
+
+
+        /*
+         * Оскорбление + отдельный мат
+         * в ОДНОМ сообщении.
+         */
         if (
-            insultMatches.length >
+            allInsults.length >
+            0 &&
+            allMat.length >
+            0
+        ) {
+
+            return {
+                type:
+                TYPE.INSULT_MAT,
+
+                reason:
+                REASON_BY_TYPE
+                    .INSULT_MAT,
+
+                confidence:
+                    'high',
+
+                matches:
+                    [
+                        ...allInsults,
+                        ...allMat
+                    ]
+            };
+        }
+
+
+        /*
+         * =========================================================
+         * ОБЫЧНОЕ ОСКОРБЛЕНИЕ
+         * =========================================================
+         */
+
+        if (
+            allInsults.length >
             0
         ) {
 
@@ -975,13 +1544,19 @@
                     'medium',
 
                 matches:
-                insultMatches
+                allInsults
             };
         }
 
 
+        /*
+         * =========================================================
+         * МАТ
+         * =========================================================
+         */
+
         if (
-            matMatches.length >
+            allMat.length >
             0
         ) {
 
@@ -997,20 +1572,33 @@
                     'medium',
 
                 matches:
-                matMatches
+                allMat
             };
         }
 
 
-        const amoralMatches =
-            findMatches(
-                text,
-                DATABASE.AMORAL
-            );
+        /*
+         * =========================================================
+         * AMORAL
+         * =========================================================
+         */
+
+        const allAmoral =
+            [
+                ...amoralMatches,
+
+                ...aliasByCategory(
+                    TYPE.AMORAL
+                ),
+
+                ...learnedByCategory(
+                    TYPE.AMORAL
+                )
+            ];
 
 
         if (
-            amoralMatches.length >
+            allAmoral.length >
             0
         ) {
 
@@ -1026,95 +1614,29 @@
                     'low',
 
                 matches:
-                amoralMatches
+                allAmoral
             };
         }
 
 
-        const aliasMatches =
-            findRecognitionAliasMatches(
+        /*
+         * =========================================================
+         * COMPACT FALLBACK
+         * =========================================================
+         *
+         * Оставляем существующую защиту от обходов:
+         *
+         * п - и - з - д - а
+         * х . у . й
+         * и т.п.
+         * =========================================================
+         */
+
+        const normalizedForCompact =
+            normalize(
                 text
             );
 
-
-        if (
-            aliasMatches.length > 0
-        ) {
-
-            const matchByPriority =
-                aliasMatches.find(
-                    (item) =>
-                        item.category === 'INSULT_MAT'
-                ) ||
-                aliasMatches.find(
-                    (item) =>
-                        item.category === 'INSULT'
-                ) ||
-                aliasMatches.find(
-                    (item) =>
-                        item.category === 'MAT'
-                ) ||
-                aliasMatches[0];
-
-
-            if (matchByPriority) {
-                const reason =
-                    matchByPriority.category === 'INSULT_MAT'
-                        ? REASON_BY_TYPE.INSULT_MAT
-                        : matchByPriority.category === 'INSULT'
-                            ? REASON_BY_TYPE.INSULT
-                            : REASON_BY_TYPE.MAT;
-
-                return {
-                    type:
-                        matchByPriority.category === 'INSULT_MAT'
-                            ? TYPE.INSULT_MAT
-                            : matchByPriority.category === 'INSULT'
-                                ? TYPE.INSULT
-                                : TYPE.MAT,
-
-                    reason,
-
-                    confidence:
-                        typeof matchByPriority.confidence === 'number' &&
-                        matchByPriority.confidence >= 0.95
-                            ? 'high'
-                            : typeof matchByPriority.confidence === 'number' &&
-                              matchByPriority.confidence >= 0.85
-                                ? 'medium'
-                                : 'low',
-
-                    matches:
-                        aliasMatches.map(
-                            (item) => item.alias || item.canonical
-                        )
-                };
-            }
-        }
-
-
-        /*
-         * Compact-key fallback.
-         *
-         * Covers multi-char or inconsistent separator patterns that
-         * _normalizeSepsStr cannot collapse via its backreference rule:
-         *   "п - и - з - д - а" → "пизда"
-         *   "х . у . й"         → "хуй"
-         *   "п  и  з  д  а"     → "пизда"  (double-space)
-         *
-         * Safety guards:
-         *   1. Only triggers when non-letter chars were actually
-         *      stripped (compact ≠ normalized), so plain text skips
-         *      this path entirely.
-         *   2. Minimum compact length 3 — avoids single-char noise.
-         *   3. findMatches uses word-boundary prefix pattern, so a
-         *      prohibited root must appear at the start of the compact
-         *      string or after a non-word char — concatenated word
-         *      runs where a prohibited root lands mid-interior are
-         *      not matched.
-         */
-        const normalizedForCompact =
-            normalize(text);
 
         const compactText =
             normalizedForCompact.replace(
@@ -1122,84 +1644,279 @@
                 ''
             );
 
+
         if (
-            compactText.length >= 3 &&
-            compactText !== normalizedForCompact
+            compactText.length >=
+            3 &&
+            compactText !==
+            normalizedForCompact
         ) {
 
             const cInsultMat =
-                findMatches(compactText, DATABASE.INSULT_MAT);
+                findMatches(
+                    compactText,
+                    DATABASE.INSULT_MAT
+                );
 
-            if (cInsultMat.length > 0) {
+
+            if (
+                cInsultMat.length >
+                0
+            ) {
+
                 return {
-                    type:       TYPE.INSULT_MAT,
-                    reason:     REASON_BY_TYPE.INSULT_MAT,
-                    confidence: 'medium',
-                    matches:    cInsultMat
+                    type:
+                    TYPE.INSULT_MAT,
+
+                    reason:
+                    REASON_BY_TYPE
+                        .INSULT_MAT,
+
+                    confidence:
+                        'medium',
+
+                    matches:
+                    cInsultMat
                 };
             }
 
-            const cInsult = findMatches(compactText, DATABASE.INSULT);
-            const cMat    = findMatches(compactText, DATABASE.MAT);
 
-            if (cInsult.length > 0 && cMat.length > 0) {
+            const cInsult =
+                findMatches(
+                    compactText,
+                    DATABASE.INSULT
+                );
+
+
+            const cMat =
+                findMatches(
+                    compactText,
+                    DATABASE.MAT
+                );
+
+
+            if (
+                cInsult.length >
+                0 &&
+                cMat.length >
+                0
+            ) {
+
                 return {
-                    type:       TYPE.INSULT_MAT,
-                    reason:     REASON_BY_TYPE.INSULT_MAT,
-                    confidence: 'medium',
-                    matches:    [...cInsult, ...cMat]
+                    type:
+                    TYPE.INSULT_MAT,
+
+                    reason:
+                    REASON_BY_TYPE
+                        .INSULT_MAT,
+
+                    confidence:
+                        'medium',
+
+                    matches:
+                        [
+                            ...cInsult,
+                            ...cMat
+                        ]
                 };
             }
 
-            if (cInsult.length > 0) {
+
+            if (
+                cInsult.length >
+                0
+            ) {
+
                 return {
-                    type:       TYPE.INSULT,
-                    reason:     REASON_BY_TYPE.INSULT,
-                    confidence: 'medium',
-                    matches:    cInsult
+                    type:
+                    TYPE.INSULT,
+
+                    reason:
+                    REASON_BY_TYPE
+                        .INSULT,
+
+                    confidence:
+                        'medium',
+
+                    matches:
+                    cInsult
                 };
             }
 
-            if (cMat.length > 0) {
+
+            if (
+                cMat.length >
+                0
+            ) {
+
                 return {
-                    type:       TYPE.MAT,
-                    reason:     REASON_BY_TYPE.MAT,
-                    confidence: 'medium',
-                    matches:    cMat
+                    type:
+                    TYPE.MAT,
+
+                    reason:
+                    REASON_BY_TYPE
+                        .MAT,
+
+                    confidence:
+                        'medium',
+
+                    matches:
+                    cMat
                 };
             }
         }
 
-        // Digit-stripped variant: digits used as noise separators between letters
-        // (e.g. "п0-и-з-д-а"). The LOOKALIKE_MAP converts some digits to Cyrillic
-        // letters (0→о, 1→и, 3→з) before separator collapse, which corrupts the
-        // reconstructed form. Stripping digits first and re-normalizing produces the
-        // clean candidate. Only triggers when digits are present AND stripping changes
-        // the normalized form (guards against ordinary numbered messages).
-        if (/[0-9]/.test(text)) {
-            const digitStripped     = text.replace(/[0-9]/g, '');
-            const normDigitStripped = normalize(digitStripped);
 
-            if (normDigitStripped && normDigitStripped !== normalizedForCompact) {
-                const dsInsultMat = findMatches(normDigitStripped, DATABASE.INSULT_MAT);
-                if (dsInsultMat.length > 0) {
-                    return { type: TYPE.INSULT_MAT, reason: REASON_BY_TYPE.INSULT_MAT, confidence: 'medium', matches: dsInsultMat };
+        /*
+         * =========================================================
+         * DIGIT-STRIPPED FALLBACK
+         * =========================================================
+         *
+         * п0-и-з-д-а
+         * и похожие обходы.
+         * =========================================================
+         */
+
+        if (
+            /[0-9]/.test(
+                text
+            )
+        ) {
+
+            const digitStripped =
+                text.replace(
+                    /[0-9]/g,
+                    ''
+                );
+
+
+            const normDigitStripped =
+                normalize(
+                    digitStripped
+                );
+
+
+            if (
+                normDigitStripped &&
+                normDigitStripped !==
+                normalizedForCompact
+            ) {
+
+                const dsInsultMat =
+                    findMatches(
+                        normDigitStripped,
+                        DATABASE.INSULT_MAT
+                    );
+
+
+                if (
+                    dsInsultMat.length >
+                    0
+                ) {
+
+                    return {
+                        type:
+                        TYPE.INSULT_MAT,
+
+                        reason:
+                        REASON_BY_TYPE
+                            .INSULT_MAT,
+
+                        confidence:
+                            'medium',
+
+                        matches:
+                        dsInsultMat
+                    };
                 }
 
-                const dsInsult = findMatches(normDigitStripped, DATABASE.INSULT);
-                const dsMat    = findMatches(normDigitStripped, DATABASE.MAT);
 
-                if (dsInsult.length > 0 && dsMat.length > 0) {
-                    return { type: TYPE.INSULT_MAT, reason: REASON_BY_TYPE.INSULT_MAT, confidence: 'medium', matches: [...dsInsult, ...dsMat] };
+                const dsInsult =
+                    findMatches(
+                        normDigitStripped,
+                        DATABASE.INSULT
+                    );
+
+
+                const dsMat =
+                    findMatches(
+                        normDigitStripped,
+                        DATABASE.MAT
+                    );
+
+
+                if (
+                    dsInsult.length >
+                    0 &&
+                    dsMat.length >
+                    0
+                ) {
+
+                    return {
+                        type:
+                        TYPE.INSULT_MAT,
+
+                        reason:
+                        REASON_BY_TYPE
+                            .INSULT_MAT,
+
+                        confidence:
+                            'medium',
+
+                        matches:
+                            [
+                                ...dsInsult,
+                                ...dsMat
+                            ]
+                    };
                 }
-                if (dsInsult.length > 0) {
-                    return { type: TYPE.INSULT, reason: REASON_BY_TYPE.INSULT, confidence: 'medium', matches: dsInsult };
+
+
+                if (
+                    dsInsult.length >
+                    0
+                ) {
+
+                    return {
+                        type:
+                        TYPE.INSULT,
+
+                        reason:
+                        REASON_BY_TYPE
+                            .INSULT,
+
+                        confidence:
+                            'medium',
+
+                        matches:
+                        dsInsult
+                    };
                 }
-                if (dsMat.length > 0) {
-                    return { type: TYPE.MAT, reason: REASON_BY_TYPE.MAT, confidence: 'medium', matches: dsMat };
+
+
+                if (
+                    dsMat.length >
+                    0
+                ) {
+
+                    return {
+                        type:
+                        TYPE.MAT,
+
+                        reason:
+                        REASON_BY_TYPE
+                            .MAT,
+
+                        confidence:
+                            'medium',
+
+                        matches:
+                        dsMat
+                    };
                 }
             }
         }
+
 
         return null;
     }
@@ -1272,6 +1989,35 @@
      */
 
 
+    /*
+ * =========================================================
+ * GET RECOMMENDED REASONS
+ * =========================================================
+ *
+ * Собирает ВСЕ категории нарушений,
+ * найденные в репорте.
+ *
+ * Важно:
+ *
+ * player-insult-mat НЕ должен удалять
+ * player-insult или mat-amoral из других сообщений.
+ *
+ * Пример:
+ *
+ * "Бомж"
+ *      -> player-insult
+ *
+ * "ты бомж ебаный"
+ *      -> player-insult-mat
+ *
+ * "ебать"
+ *      -> mat-amoral
+ *
+ * Все три рекомендации могут существовать
+ * одновременно.
+ * =========================================================
+ */
+
     function getRecommendedReasons(
         messages
     ) {
@@ -1293,7 +2039,10 @@
                     classification.reason;
 
 
-                if (!reason) {
+                if (
+                    !reason ||
+                    !reason.reasonId
+                ) {
                     return;
                 }
 
@@ -1304,6 +2053,10 @@
                     );
 
 
+                /*
+                 * Первая классификация
+                 * этого типа нарушения.
+                 */
                 if (
                     !existing
                 ) {
@@ -1320,9 +2073,10 @@
                             count:
                                 1,
 
-                            examples: [
-                                classification
-                            ]
+                            examples:
+                                [
+                                    classification
+                                ]
                         }
                     );
 
@@ -1331,9 +2085,17 @@
                 }
 
 
+                /*
+                 * Такая категория уже была найдена
+                 * в другом сообщении.
+                 */
                 existing.count++;
 
 
+                /*
+                 * Храним максимум три примера,
+                 * чтобы не раздувать объект.
+                 */
                 if (
                     existing.examples.length <
                     3
@@ -1348,33 +2110,17 @@
 
 
         /*
-         * Если есть:
+         * НИЧЕГО здесь не удаляем.
          *
-         * Оскорбление игроков + Мат
+         * Если в разных сообщениях присутствуют:
          *
-         * отдельные:
+         * - Мат/Аморал
+         * - Оскорбление игроков
+         * - Оскорбление игроков + Мат
          *
-         * Мат/Аморал
-         * Оскорбление игроков
-         *
-         * уже не нужны как основная рекомендация.
+         * все соответствующие плитки должны
+         * получить рекомендации.
          */
-
-        if (
-            recommendations.has(
-                'player-insult-mat'
-            )
-        ) {
-
-            recommendations.delete(
-                'player-insult'
-            );
-
-
-            recommendations.delete(
-                'mat-amoral'
-            );
-        }
 
 
         return [

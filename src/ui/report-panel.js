@@ -569,8 +569,8 @@
             outputReason:
                 'Провокация игроков',
 
-            minutes: 1440,
-            severity: 'critical',
+            minutes: 43200,
+            severity: 'standard',
             repeatable: false
         },
 
@@ -670,6 +670,7 @@
     /* =========================================================
        PANEL
        ========================================================= */
+
     const VRH_REASON_ICONS = {
         'Flood': '💬',
         'Flood символами': '💬',
@@ -722,9 +723,11 @@
         'Распространение багов': '🔧'
     };
 
+
     function getReasonIcon(reason) {
         return VRH_REASON_ICONS[reason] || '•';
     }
+
 
     class VimeReportPanel {
 
@@ -781,7 +784,8 @@
             panel.className =
                 'vrh-panel';
 
-            panel.hidden = true;
+            panel.hidden =
+                true;
 
 
             panel.innerHTML = `
@@ -909,10 +913,10 @@
                      REPORT SCANNER
                      ================================================= -->
 
-                                <div class="vrh-report-scanners">
-                
+                <div class="vrh-report-scanners">
+
                     <div class="vrh-report-scanner">
-                
+
                         <button
                             id="vrh-scan-report"
                             class="vrh-action vrh-action--scan"
@@ -920,19 +924,19 @@
                         >
                             Скан нарушений
                         </button>
-                
+
                         <span
                             id="vrh-scan-result"
                             class="vrh-scan-result"
                         >
                             Не запускался
                         </span>
-                
+
                     </div>
-                
-                
+
+
                     <div class="vrh-report-scanner">
-                
+
                         <button
                             id="vrh-scan-flood"
                             class="vrh-action vrh-action--scan vrh-action--scan-flood"
@@ -940,16 +944,16 @@
                         >
                             Скан Flood
                         </button>
-                
+
                         <span
                             id="vrh-flood-result"
                             class="vrh-scan-result vrh-flood-result"
                         >
                             Не запускался
                         </span>
-                
+
                     </div>
-                
+
                 </div>
 
 
@@ -1081,7 +1085,194 @@
                 '';
 
 
-            REASON_DEFINITIONS.forEach(
+            /*
+             * Визуальная группировка причин.
+             *
+             * Она не меняет:
+             * - официальные причины;
+             * - минуты;
+             * - severity;
+             * - группы;
+             * - расчёт наказания.
+             */
+            const sections = [
+                {
+                    id:
+                        'basic',
+
+                    title:
+                        'Базовые',
+
+                    reasonIds: [
+                        'flood',
+                        'flood-symbols',
+                        'caps-lock',
+                        'voting'
+                    ]
+                },
+
+                {
+                    id:
+                        'behaviour',
+
+                    title:
+                        'Неадекватное поведение',
+
+                    reasonIds: [
+                        'mat-amoral',
+                        'player-insult',
+                        'player-insult-mat'
+                    ]
+                },
+
+                {
+                    id:
+                        'staff-project',
+
+                    title:
+                        'Игроки / Персонал',
+
+                    reasonIds: [
+                        'relative-insult',
+                        'staff-insult',
+                        'staff-disrespect',
+                        'administration-insult',
+                        'administration-disrespect',
+                        'project-insult',
+                        'staff-impersonation',
+                        'administration-impersonation',
+                        'player-provocation'
+                    ]
+                },
+
+                {
+                    id:
+                        'other',
+
+                    title:
+                        'Реклама / Прочее',
+
+                    reasonIds: [
+                        'third-party-promotion',
+                        'project-advertising',
+                        'offtopic',
+                        'political-agitation',
+                        'player-deception',
+                        'suicide-call'
+                    ]
+                },
+
+                {
+                    id:
+                        'economy',
+
+                    title:
+                        'Экономика',
+
+                    reasonIds: [
+                        'vimer-selling',
+                        'vimer-buying',
+                        'services-for-vimers',
+                        'non-game-items-for-vimers',
+                        'items-for-real-money',
+                        'services-for-real-money'
+                    ]
+                },
+
+                {
+                    id:
+                        'critical',
+
+                    title:
+                        'Требуют передачи модератору',
+
+                    critical:
+                        true,
+
+                    reasonIds: [
+                        'account-selling',
+                        'account-buying',
+                        'account-transfer',
+                        'drug-propaganda',
+                        'fascism-propaganda',
+                        'cheat-distribution',
+                        'bug-distribution'
+                    ]
+                }
+            ];
+            /*
+             * =========================================================
+             * REASON COLUMNS
+             * =========================================================
+             *
+             * Три независимые вертикальные колонки.
+             *
+             * Это нужно, чтобы высота длинной секции справа
+             * не создавала пустое пространство под короткими
+             * секциями слева.
+             */
+
+            const columns =
+                [
+                    document.createElement('div'),
+                    document.createElement('div'),
+                    document.createElement('div')
+                ];
+
+
+            columns.forEach(
+                (column) => {
+
+                    column.className =
+                        'vrh-reason-column';
+
+
+                    container.appendChild(
+                        column
+                    );
+                }
+            );
+
+
+            /*
+             * Распределение секций:
+             *
+             * 0 — Базовые
+             * 1 — Неадекватное поведение
+             * 2 — Игроки / Персонал
+             * 3 — Реклама / Прочее
+             * 4 — Экономика
+             * 5 — Critical
+             *
+             * Получаем:
+             *
+             * COLUMN 1       COLUMN 2             COLUMN 3
+             * Базовые        Неадекватное         Игроки / Персонал
+             * Реклама        Экономика            Critical
+             */
+
+            const sectionColumnMap =
+                [
+                    0,
+                    1,
+                    2,
+                    0,
+                    1,
+                    2
+                ];
+
+            const definitionsById =
+                new Map(
+                    REASON_DEFINITIONS.map(
+                        (definition) => [
+                            definition.id,
+                            definition
+                        ]
+                    )
+                );
+
+
+            const createReasonButton =
                 (definition) => {
 
                     const button =
@@ -1089,44 +1280,57 @@
                             'button'
                         );
 
+
                     button.type =
                         'button';
+
 
                     button.className =
                         `vrh-reason vrh-reason--${definition.severity}`;
 
+
                     /*
- * Короткие причины делаем компактными.
- * Длинные сохраняют нормальную высоту
- * и могут занимать несколько строк.
- */
+                     * Короткие причины делаем компактнее.
+                     */
                     if (
-                        definition.label.length <= 18
+                        definition.label.length <=
+                        18
                     ) {
                         button.classList.add(
                             'vrh-reason--compact'
                         );
                     }
+
+
                     button.dataset.reasonId =
                         definition.id;
+
 
                     const icon =
                         document.createElement(
                             'span'
                         );
 
+
                     icon.className =
                         'vrh-reason__icon';
 
+
                     icon.textContent =
-                        getReasonIcon(definition.label);
+                        getReasonIcon(
+                            definition.label
+                        );
+
 
                     icon.setAttribute(
                         'aria-hidden',
                         'true'
                     );
 
-                    button.appendChild(icon);
+
+                    button.appendChild(
+                        icon
+                    );
 
 
                     const label =
@@ -1134,8 +1338,10 @@
                             'span'
                         );
 
+
                     label.className =
                         'vrh-reason__label';
+
 
                     label.textContent =
                         definition.label;
@@ -1146,6 +1352,10 @@
                     );
 
 
+                    /*
+                     * Счётчик нужен для стакающихся
+                     * причин из группы Неадекватного поведения.
+                     */
                     if (
                         definition.group
                     ) {
@@ -1154,8 +1364,10 @@
                                 'span'
                             );
 
+
                         counter.className =
                             'vrh-reason__counter vrh-reason__counter--empty';
+
 
                         counter.textContent =
                             '×0';
@@ -1177,11 +1389,220 @@
                     );
 
 
-                    container.appendChild(
-                        button
+                    return button;
+                };
+
+
+            sections.forEach(
+                (sectionDefinition, sectionIndex) => {
+
+                    const section =
+                        document.createElement(
+                            'section'
+                        );
+
+
+                    section.className =
+                        'vrh-reason-section';
+
+
+                    section.dataset.section =
+                        sectionDefinition.id;
+
+
+                    if (
+                        sectionDefinition.critical
+                    ) {
+                        section.classList.add(
+                            'vrh-reason-section--critical'
+                        );
+                    }
+
+
+                    const heading =
+                        document.createElement(
+                            'div'
+                        );
+
+
+                    heading.className =
+                        'vrh-reason-section__title';
+
+
+                    heading.textContent =
+                        sectionDefinition.title;
+
+
+                    const grid =
+                        document.createElement(
+                            'div'
+                        );
+
+
+                    grid.className =
+                        'vrh-reason-section__grid';
+
+
+                    sectionDefinition.reasonIds.forEach(
+                        (reasonId) => {
+
+                            const definition =
+                                definitionsById.get(
+                                    reasonId
+                                );
+
+
+                            if (
+                                !definition
+                            ) {
+                                return;
+                            }
+
+
+                            grid.appendChild(
+                                createReasonButton(
+                                    definition
+                                )
+                            );
+                        }
                     );
+
+
+                    if (
+                        !grid.children.length
+                    ) {
+                        return;
+                    }
+
+
+                    section.appendChild(
+                        heading
+                    );
+
+
+                    section.appendChild(
+                        grid
+                    );
+
+
+                    /*
+                     * Critical-секцию выводим отдельно
+                     * под всеми тремя колонками.
+                     */
+                    if (
+                        sectionDefinition.critical
+                    ) {
+                        container.appendChild(
+                            section
+                        );
+
+                    } else {
+
+                        const targetColumn =
+                            columns[
+                            sectionColumnMap[
+                                sectionIndex
+                                ] ?? 0
+                                ];
+
+
+                        targetColumn.appendChild(
+                            section
+                        );
+                    }
                 }
             );
+
+
+            /*
+             * Защита на будущее:
+             *
+             * если в REASON_DEFINITIONS добавится новая причина,
+             * но её забудут прописать в секциях,
+             * она всё равно появится в UI.
+             */
+            const renderedIds =
+                new Set(
+                    sections.flatMap(
+                        (section) =>
+                            section.reasonIds
+                    )
+                );
+
+
+            const ungrouped =
+                REASON_DEFINITIONS.filter(
+                    (definition) =>
+                        !renderedIds.has(
+                            definition.id
+                        )
+                );
+
+
+            if (
+                ungrouped.length
+            ) {
+
+                const section =
+                    document.createElement(
+                        'section'
+                    );
+
+
+                section.className =
+                    'vrh-reason-section';
+
+
+                const heading =
+                    document.createElement(
+                        'div'
+                    );
+
+
+                heading.className =
+                    'vrh-reason-section__title';
+
+
+                heading.textContent =
+                    'Прочее';
+
+
+                const grid =
+                    document.createElement(
+                        'div'
+                    );
+
+
+                grid.className =
+                    'vrh-reason-section__grid';
+
+
+                ungrouped.forEach(
+                    (definition) => {
+
+                        grid.appendChild(
+                            createReasonButton(
+                                definition
+                            )
+                        );
+                    }
+                );
+
+
+                section.appendChild(
+                    heading
+                );
+
+
+                section.appendChild(
+                    grid
+                );
+
+
+                container.appendChild(
+                    section
+                );
+            }
         }
 
 
@@ -1200,6 +1621,7 @@
                         this.hide();
                     }
                 );
+
 
             this.panel
                 ?.querySelector(
@@ -1254,6 +1676,7 @@
                     }
                 );
 
+
             this.panel
                 ?.querySelector(
                     '#vrh-scan-flood'
@@ -1284,6 +1707,7 @@
                                 '.vrh-text-tool__input'
                             );
 
+
                         const counter =
                             row.querySelector(
                                 '.vrh-text-tool__count'
@@ -1293,7 +1717,10 @@
                         input?.addEventListener(
                             'input',
                             () => {
-                                if (counter) {
+
+                                if (
+                                    counter
+                                ) {
                                     counter.textContent =
                                         `${input.value.length} симв.`;
                                 }
@@ -1308,6 +1735,7 @@
                             ?.addEventListener(
                                 'click',
                                 () => {
+
                                     this.convertTextTool(
                                         row,
                                         'eng-rus'
@@ -1323,6 +1751,7 @@
                             ?.addEventListener(
                                 'click',
                                 () => {
+
                                     this.convertTextTool(
                                         row,
                                         'rus-eng'
@@ -1344,103 +1773,150 @@
                     '#vrh-scan-result'
                 );
 
+
             const scanButton =
                 this.panel?.querySelector(
                     '#vrh-scan-report'
                 );
 
+
             if (
                 this.mode !==
                 'report'
             ) {
-                if (resultElement) {
+                if (
+                    resultElement
+                ) {
                     resultElement.textContent =
                         'Сначала открой репорт';
                 }
 
+
                 return;
             }
+
 
             if (
                 !window
                     .VimeReportDomAdapter
                     ?.isReportOpen?.()
             ) {
-                if (resultElement) {
+                if (
+                    resultElement
+                ) {
                     resultElement.textContent =
                         'Репорт не открыт';
                 }
 
+
                 return;
             }
 
+
             const scanner =
-                window.VimeReportViolationScanner;
+                window
+                    .VimeReportViolationScanner;
+
 
             if (
                 !scanner ||
                 typeof scanner.scan !==
                 'function'
             ) {
-                if (resultElement) {
+                if (
+                    resultElement
+                ) {
                     resultElement.textContent =
                         'Scanner недоступен';
                 }
 
+
                 return;
             }
 
-            if (scanButton) {
+
+            if (
+                scanButton
+            ) {
                 scanButton.disabled =
                     true;
+
 
                 scanButton.textContent =
                     'Сканирование...';
             }
 
+
             try {
+
                 const scanOutput =
                     scanner.scan();
 
+
                 const results =
-                    Array.isArray(scanOutput)
+                    Array.isArray(
+                        scanOutput
+                    )
                         ? scanOutput
-                        : Array.isArray(scanOutput?.matches)
+
+                        : Array.isArray(
+                            scanOutput?.matches
+                        )
                             ? scanOutput.matches
-                            : Array.isArray(scanOutput?.results)
+
+                            : Array.isArray(
+                                scanOutput?.results
+                            )
                                 ? scanOutput.results
+
                                 : [];
+
 
                 this.lastScanResults =
                     results;
 
+
                 this.renderScanResult(
                     this.lastScanResults
                 );
+
+
                 this.updateCapsRecommendation();
+
                 this.updateViolationRecommendation();
 
-            } catch (error) {
+            } catch (
+                error
+                ) {
+
                 console.error(
                     '[Vime Report Helper] Report scan failed:',
                     error
                 );
 
-                if (resultElement) {
+
+                if (
+                    resultElement
+                ) {
                     resultElement.textContent =
                         'Ошибка сканирования';
                 }
 
             } finally {
-                if (scanButton) {
+
+                if (
+                    scanButton
+                ) {
                     scanButton.disabled =
                         false;
+
 
                     scanButton.textContent =
                         'Сканировать репорт';
                 }
             }
         }
+
 
         runFloodScan() {
             const resultElement =
@@ -1459,10 +1935,13 @@
                 this.mode !==
                 'report'
             ) {
-                if (resultElement) {
+                if (
+                    resultElement
+                ) {
                     resultElement.textContent =
                         'Сначала открой репорт';
                 }
+
 
                 return;
             }
@@ -1473,17 +1952,21 @@
                     .VimeReportDomAdapter
                     ?.isReportOpen?.()
             ) {
-                if (resultElement) {
+                if (
+                    resultElement
+                ) {
                     resultElement.textContent =
                         'Репорт не открыт';
                 }
+
 
                 return;
             }
 
 
             const scanner =
-                window.VimeReportFloodScanner;
+                window
+                    .VimeReportFloodScanner;
 
 
             if (
@@ -1491,18 +1974,24 @@
                 typeof scanner.scan !==
                 'function'
             ) {
-                if (resultElement) {
+                if (
+                    resultElement
+                ) {
                     resultElement.textContent =
                         'Flood Scanner недоступен';
                 }
+
 
                 return;
             }
 
 
-            if (scanButton) {
+            if (
+                scanButton
+            ) {
                 scanButton.disabled =
                     true;
+
 
                 scanButton.textContent =
                     'Сканирование...';
@@ -1510,6 +1999,7 @@
 
 
             try {
+
                 const result =
                     scanner.scan();
 
@@ -1518,7 +2008,9 @@
                     result
                 );
 
-            } catch (error) {
+            } catch (
+                error
+                ) {
 
                 console.error(
                     '[Vime Report Helper] Flood scan failed:',
@@ -1526,22 +2018,28 @@
                 );
 
 
-                if (resultElement) {
+                if (
+                    resultElement
+                ) {
                     resultElement.textContent =
                         'Ошибка сканирования';
                 }
 
             } finally {
 
-                if (scanButton) {
+                if (
+                    scanButton
+                ) {
                     scanButton.disabled =
                         false;
+
 
                     scanButton.textContent =
                         'Скан Flood';
                 }
             }
         }
+
 
         renderFloodScanResult(
             result
@@ -1552,7 +2050,9 @@
                 );
 
 
-            if (!element) {
+            if (
+                !element
+            ) {
                 return;
             }
 
@@ -1567,6 +2067,7 @@
                 !result ||
                 !result.detected
             ) {
+
                 const symbolCount =
                     result
                         ?.symbolFlood
@@ -1594,11 +2095,13 @@
             }
 
 
-            const parts = [];
+            const parts =
+                [];
 
 
             if (
-                result.symbolFlood
+                result
+                    .symbolFlood
                     ?.detected
             ) {
                 parts.push(
@@ -1608,7 +2111,8 @@
 
 
             if (
-                result.repeatedFlood
+                result
+                    .repeatedFlood
                     ?.detected
             ) {
                 parts.push(
@@ -1627,14 +2131,18 @@
         }
 
 
-        renderScanResult(results) {
+        renderScanResult(
+            results
+        ) {
             const element =
                 this.panel?.querySelector(
                     '#vrh-scan-result'
                 );
 
 
-            if (!element) {
+            if (
+                !element
+            ) {
                 return;
             }
 
@@ -1646,8 +2154,8 @@
 
 
             /*
-             * Старый раскрытый список перед новым
-             * результатом всегда удаляем.
+             * Старый раскрытый список
+             * перед новым результатом удаляем.
              */
             this.panel
                 ?.querySelector(
@@ -1658,14 +2166,17 @@
 
             if (
                 !results ||
-                results.length === 0
+                results.length ===
+                0
             ) {
                 element.innerHTML =
                     'Совпадений не найдено';
 
+
                 element.classList.add(
                     'vrh-scan-result--clean'
                 );
+
 
                 return;
             }
@@ -1689,28 +2200,28 @@
 
 
             element.innerHTML = `
-        <span>
-            ${results.length} нарушений · ${messageIndexes.size} сообщ.
-        </span>
+                <span>
+                    ${results.length} нарушений · ${messageIndexes.size} сообщ.
+                </span>
 
-        <button
-            id="vrh-scan-details-toggle"
-            type="button"
-            style="
-                margin-left: 8px;
-                padding: 3px 8px;
-                border: 0;
-                border-radius: 5px;
-                background: #4c78a8;
-                color: #fff;
-                font-size: 12px;
-                font-weight: 700;
-                cursor: pointer;
-            "
-        >
-            Детали
-        </button>
-    `;
+                <button
+                    id="vrh-scan-details-toggle"
+                    type="button"
+                    style="
+                        margin-left: 8px;
+                        padding: 3px 8px;
+                        border: 0;
+                        border-radius: 5px;
+                        background: #4c78a8;
+                        color: #fff;
+                        font-size: 12px;
+                        font-weight: 700;
+                        cursor: pointer;
+                    "
+                >
+                    Детали
+                </button>
+            `;
 
 
             element.classList.add(
@@ -1725,6 +2236,7 @@
                 ?.addEventListener(
                     'click',
                     () => {
+
                         this.toggleScanDetails(
                             results
                         );
@@ -1732,9 +2244,11 @@
                 );
         }
 
+
         updateCapsRecommendation() {
             const scanner =
-                window.VimeReportViolationScanner;
+                window
+                    .VimeReportViolationScanner;
 
 
             const result =
@@ -1748,7 +2262,9 @@
                 );
 
 
-            if (!button) {
+            if (
+                !button
+            ) {
                 return;
             }
 
@@ -1781,50 +2297,298 @@
 
 
         /*
-         * Apply vrh-reason--recommended to the violation tile that
-         * best matches the scanner's current recommendation.
+         * Подсвечивает плитку причины,
+         * которую рекомендует Scanner.
          *
-         * Caps-lock, flood and flood-symbols tiles are managed by
-         * separate systems and are intentionally excluded here.
+         * Caps Lock и Flood
+         * управляются отдельными системами.
          */
         updateViolationRecommendation() {
-            const SKIP_IDS = new Set([
-                'caps-lock',
-                'flood',
-                'flood-symbols'
-            ]);
+                /*
+                 * =========================================================
+                 * SCANNER REASON RECOMMENDATIONS
+                 * =========================================================
+                 *
+                 * Сканер может одновременно определить несколько типов:
+                 *
+                 * - Мат/Аморал
+                 * - Оскорбление игроков
+                 * - Оскорбление игроков + Мат
+                 * - Оскорбление родственников
+                 *
+                 * Мы НЕ выбираем только одну "лучшую" плитку.
+                 * Вместо этого показываем все реальные рекомендации
+                 * соответствующими цветами.
+                 */
 
-            // Clear recommendation highlight from all violation tiles.
-            this.panel
-                ?.querySelectorAll('[data-reason-id]')
-                .forEach((btn) => {
-                    if (!SKIP_IDS.has(btn.dataset.reasonId)) {
-                        btn.classList.remove('vrh-reason--recommended');
+                const scanner =
+                    window.VimeReportViolationScanner;
+
+
+                const buttons =
+                    this.panel?.querySelectorAll(
+                        '[data-reason-id]'
+                    );
+
+
+                if (
+                    !buttons
+                ) {
+                    return;
+                }
+
+
+                /*
+                 * Сначала очищаем прошлые рекомендации.
+                 *
+                 * Выбранные вручную причины
+                 * vrh-reason--selected не затрагиваем.
+                 */
+                buttons.forEach(
+                    (button) => {
+
+                        button.classList.remove(
+                            'vrh-reason--recommended',
+                            'vrh-reason--scan-mat',
+                            'vrh-reason--scan-insult',
+                            'vrh-reason--scan-insult-mat',
+                            'vrh-reason--scan-relative'
+                        );
                     }
-                });
-
-            const scanner =
-                window.VimeReportViolationScanner;
-
-            const recommendation =
-                scanner?.getBestRecommendation?.();
-
-            if (!recommendation?.reasonId) {
-                return;
-            }
-
-            const button =
-                this.panel?.querySelector(
-                    `[data-reason-id="${recommendation.reasonId}"]`
                 );
 
-            if (button) {
-                button.classList.add('vrh-reason--recommended');
+
+                /*
+                 * Получаем ВСЕ рекомендации,
+                 * а не только getBestRecommendation().
+                 */
+                const recommendations =
+                    scanner
+                        ?.getLastRecommendations?.() ??
+                    [];
+
+
+                const recommendationIds =
+                    new Set(
+                        recommendations
+                            .map(
+                                (recommendation) =>
+                                    recommendation?.reasonId
+                            )
+                            .filter(Boolean)
+                    );
+
+
+                /*
+                 * Универсальный helper.
+                 */
+                const markReason =
+                    (
+                        reasonId,
+                        className
+                    ) => {
+
+                        const button =
+                            this.panel?.querySelector(
+                                `[data-reason-id="${reasonId}"]`
+                            );
+
+
+                        if (
+                            !button
+                        ) {
+                            return;
+                        }
+
+
+                        button.classList.add(
+                            className
+                        );
+                    };
+
+
+                /*
+                 * =========================================================
+                 * МАТ / АМОРАЛ
+                 * =========================================================
+                 */
+
+                if (
+                    recommendationIds.has(
+                        'mat-amoral'
+                    )
+                ) {
+                    markReason(
+                        'mat-amoral',
+                        'vrh-reason--scan-mat'
+                    );
+                }
+
+
+                /*
+                 * =========================================================
+                 * ОБЫЧНОЕ ОСКОРБЛЕНИЕ
+                 * =========================================================
+                 */
+
+                if (
+                    recommendationIds.has(
+                        'player-insult'
+                    )
+                ) {
+                    markReason(
+                        'player-insult',
+                        'vrh-reason--scan-insult'
+                    );
+                }
+
+
+                /*
+                 * =========================================================
+                 * ОСКОРБЛЕНИЕ + МАТ
+                 * =========================================================
+                 */
+
+                if (
+                    recommendationIds.has(
+                        'player-insult-mat'
+                    )
+                ) {
+                    markReason(
+                        'player-insult-mat',
+                        'vrh-reason--scan-insult-mat'
+                    );
+                }
+
+
+                /*
+                 * =========================================================
+                 * ОСКОРБЛЕНИЕ РОДСТВЕННИКОВ
+                 * =========================================================
+                 *
+                 * Relative Abuse работает отдельным слоем.
+                 *
+                 * В идеальном случае reasonId уже есть
+                 * в рекомендациях.
+                 *
+                 * Но дополнительно проверяем существующий
+                 * REL-marker, потому что Relative Abuse может
+                 * пометить плитку независимо от обычного
+                 * Violation Scanner.
+                 */
+
+                const relativeButton =
+                    this.panel?.querySelector(
+                        '[data-reason-id="relative-insult"]'
+                    );
+
+
+                let relativeDetected =
+                    recommendationIds.has(
+                        'relative-insult'
+                    );
+
+
+                if (
+                    relativeButton &&
+                    !relativeDetected
+                ) {
+
+                    /*
+                     * REL может быть реальным дочерним элементом.
+                     */
+                    const text =
+                        relativeButton.textContent ??
+                        '';
+
+
+                    if (
+                        /\bREL\b/i.test(
+                            text
+                        )
+                    ) {
+                        relativeDetected =
+                            true;
+                    }
+
+
+                    /*
+                     * Или отдельным элементом / data-атрибутом.
+                     */
+                    if (
+                        !relativeDetected &&
+                        relativeButton.querySelector(
+                            [
+                                '[data-relative]',
+                                '[data-rel]',
+                                '[class*="relative"]',
+                                '[class*="rel-badge"]'
+                            ].join(',')
+                        )
+                    ) {
+                        relativeDetected =
+                            true;
+                    }
+
+
+                    /*
+                     * Или CSS ::before / ::after.
+                     *
+                     * Это позволяет не зависеть
+                     * от конкретной реализации REL badge.
+                     */
+                    if (
+                        !relativeDetected
+                    ) {
+                        [
+                            '::before',
+                            '::after'
+                        ].some(
+                            (pseudo) => {
+
+                                const content =
+                                    window
+                                        .getComputedStyle(
+                                            relativeButton,
+                                            pseudo
+                                        )
+                                        ?.content ??
+                                    '';
+
+
+                                if (
+                                    /REL/i.test(
+                                        content
+                                    )
+                                ) {
+                                    relativeDetected =
+                                        true;
+
+                                    return true;
+                                }
+
+
+                                return false;
+                            }
+                        );
+                    }
+                }
+
+
+                if (
+                    relativeDetected
+                ) {
+                    markReason(
+                        'relative-insult',
+                        'vrh-reason--scan-relative'
+                    );
+                }
             }
-        }
 
 
-        toggleScanDetails(results) {
+        toggleScanDetails(
+            results
+        ) {
             const existing =
                 this.panel?.querySelector(
                     '#vrh-scan-details'
@@ -1839,12 +2603,17 @@
 
             /*
              * Если список уже открыт —
-             * просто закрываем его.
+             * закрываем.
              */
-            if (existing) {
+            if (
+                existing
+            ) {
                 existing.remove();
 
-                if (toggleButton) {
+
+                if (
+                    toggleButton
+                ) {
                     const messageIndexes =
                         new Set(
                             results
@@ -1866,13 +2635,17 @@
                         `Показать ${messageIndexes.size}`;
                 }
 
+
                 return;
             }
 
 
             if (
-                !Array.isArray(results) ||
-                results.length === 0
+                !Array.isArray(
+                    results
+                ) ||
+                results.length ===
+                0
             ) {
                 return;
             }
@@ -1881,7 +2654,7 @@
             /*
              * Собираем результаты по сообщениям,
              * чтобы одно сообщение не выводилось
-             * по несколько раз.
+             * несколько раз.
              */
             const grouped =
                 new Map();
@@ -1905,12 +2678,13 @@
 
 
                     if (
-                        !grouped.has(index)
+                        !grouped.has(
+                            index
+                        )
                     ) {
                         grouped.set(
                             index,
                             {
-                                index:
                                 index,
 
                                 time:
@@ -1931,14 +2705,18 @@
 
 
                     const item =
-                        grouped.get(index);
+                        grouped.get(
+                            index
+                        );
 
 
                     if (
                         result?.word
                     ) {
                         item.words.add(
-                            String(result.word)
+                            String(
+                                result.word
+                            )
                         );
                     }
                 }
@@ -1955,27 +2733,29 @@
                 'vrh-scan-details';
 
 
-            /*
-             * Пока временный стиль.
-             * В финале перенесём в CSS.
-             */
             wrapper.style.marginTop =
                 '8px';
+
 
             wrapper.style.padding =
                 '8px';
 
+
             wrapper.style.background =
                 'rgba(255,255,255,0.04)';
+
 
             wrapper.style.borderRadius =
                 '7px';
 
+
             wrapper.style.maxHeight =
                 '220px';
 
+
             wrapper.style.overflowY =
                 'auto';
+
 
             wrapper.style.fontSize =
                 '12px';
@@ -1993,6 +2773,7 @@
                     row.style.padding =
                         '6px 0';
 
+
                     row.style.borderBottom =
                         '1px solid rgba(255,255,255,0.06)';
 
@@ -2004,13 +2785,17 @@
 
 
                     time.textContent =
-                        item.time || '--:--:--';
+                        item.time ||
+                        '--:--:--';
+
 
                     time.style.color =
                         '#65b7ff';
 
+
                     time.style.fontWeight =
                         '700';
+
 
                     time.style.marginRight =
                         '8px';
@@ -2027,14 +2812,16 @@
 
 
                     /*
-                     * Подсветим найденные слова уже
-                     * внутри нашего preview.
+                     * Подсветка найденных слов
+                     * внутри preview.
                      */
                     let html =
                         text.textContent;
 
 
-                    [...item.words]
+                    [
+                        ...item.words
+                    ]
                         .sort(
                             (a, b) =>
                                 b.length -
@@ -2043,7 +2830,9 @@
                         .forEach(
                             (word) => {
 
-                                if (!word) {
+                                if (
+                                    !word
+                                ) {
                                     return;
                                 }
 
@@ -2092,10 +2881,6 @@
             );
 
 
-            /*
-             * Вставляем список прямо после строки
-             * результата Scanner.
-             */
             const resultElement =
                 this.panel?.querySelector(
                     '#vrh-scan-result'
@@ -2109,7 +2894,9 @@
                 );
 
 
-            if (toggleButton) {
+            if (
+                toggleButton
+            ) {
                 toggleButton.textContent =
                     'Скрыть';
             }
@@ -2127,7 +2914,9 @@
                 );
 
 
-            if (element) {
+            if (
+                element
+            ) {
                 element.textContent =
                     'Сканирование не запускалось';
 
@@ -2138,15 +2927,19 @@
                 );
             }
 
+
             const floodElement =
                 this.panel?.querySelector(
                     '#vrh-flood-result'
                 );
 
 
-            if (floodElement) {
+            if (
+                floodElement
+            ) {
                 floodElement.textContent =
                     'Не запускался';
+
 
                 floodElement.classList.remove(
                     'vrh-scan-result--clean',
@@ -2161,11 +2954,14 @@
                 );
 
 
-            if (floodButton) {
+            if (
+                floodButton
+            ) {
                 floodButton.disabled =
                     this.mode !==
                     'report';
             }
+
 
             const button =
                 this.panel?.querySelector(
@@ -2173,21 +2969,48 @@
                 );
 
 
-            if (button) {
+            if (
+                button
+            ) {
                 button.disabled =
-                    this.mode !== 'report';
+                    this.mode !==
+                    'report';
             }
 
-            // Clear any violation recommendation tile highlight set by
-            // the most recent scan (caps-lock and flood are managed elsewhere).
-            const SKIP_IDS = new Set(['caps-lock', 'flood', 'flood-symbols']);
+
+            /*
+             * Убираем прошлую рекомендацию Scanner.
+             */
+            const SKIP_IDS =
+                new Set([
+                    'caps-lock',
+                    'flood',
+                    'flood-symbols'
+                ]);
+
+
             this.panel
-                ?.querySelectorAll('[data-reason-id]')
-                .forEach((btn) => {
-                    if (!SKIP_IDS.has(btn.dataset.reasonId)) {
-                        btn.classList.remove('vrh-reason--recommended');
+                ?.querySelectorAll(
+                    '[data-reason-id]'
+                )
+                .forEach(
+                    (button) => {
+
+                        if (
+                            !SKIP_IDS.has(
+                                button.dataset.reasonId
+                            )
+                        ) {
+                            button.classList.remove(
+                                'vrh-reason--recommended',
+                                'vrh-reason--scan-mat',
+                                'vrh-reason--scan-insult',
+                                'vrh-reason--scan-insult-mat',
+                                'vrh-reason--scan-relative'
+                            );
+                        }
                     }
-                });
+                );
         }
 
 
@@ -2291,6 +3114,7 @@
 
 
                 this.afterStateChange();
+
 
                 return;
             }
@@ -2408,7 +3232,8 @@
             return (
                 this.groupMinutes.get(
                     groupId
-                ) ?? 0
+                ) ??
+                0
             );
         }
 
@@ -2486,7 +3311,9 @@
                 );
 
 
-            if (field) {
+            if (
+                field
+            ) {
                 field.value =
                     this.buildReasonString();
             }
@@ -2504,10 +3331,14 @@
                 );
 
 
-            if (field) {
+            if (
+                field
+            ) {
                 field.value =
                     minutes > 0
-                        ? String(minutes)
+                        ? String(
+                            minutes
+                        )
                         : '';
             }
 
@@ -2518,7 +3349,9 @@
                 );
 
 
-            if (preview) {
+            if (
+                preview
+            ) {
                 preview.textContent =
                     this.formatMinutes(
                         minutes
@@ -2531,7 +3364,8 @@
             minutes
         ) {
             if (
-                minutes <= 0
+                minutes <=
+                0
             ) {
                 return '0 мин.';
             }
@@ -2539,22 +3373,26 @@
 
             const days =
                 Math.floor(
-                    minutes / 1440
+                    minutes /
+                    1440
                 );
 
 
             const remainder =
-                minutes % 1440;
+                minutes %
+                1440;
 
 
             const hours =
                 Math.floor(
-                    remainder / 60
+                    remainder /
+                    60
                 );
 
 
             const mins =
-                remainder % 60;
+                remainder %
+                60;
 
 
             const parts =
@@ -2562,7 +3400,8 @@
 
 
             if (
-                days > 0
+                days >
+                0
             ) {
                 parts.push(
                     `${days} д.`
@@ -2571,7 +3410,8 @@
 
 
             if (
-                hours > 0
+                hours >
+                0
             ) {
                 parts.push(
                     `${hours} ч.`
@@ -2580,7 +3420,8 @@
 
 
             if (
-                mins > 0
+                mins >
+                0
             ) {
                 parts.push(
                     `${mins} мин.`
@@ -2597,10 +3438,8 @@
         updateReasonButtons() {
 
             /*
-             * Проверяем один раз для всего обновления UI,
-             * выбрана ли уже одна из Flood-причин.
+             * Выбрана ли уже одна из Flood-причин.
              */
-
             const floodSelected =
                 Array
                     .from(
@@ -2625,7 +3464,9 @@
                         );
 
 
-                    if (!button) {
+                    if (
+                        !button
+                    ) {
                         return;
                     }
 
@@ -2637,12 +3478,12 @@
 
 
                     /*
-                     * Подсветка выбранной причины.
+                     * Выбранная причина.
                      */
-
                     button.classList.toggle(
                         'vrh-reason--selected',
-                        stacks > 0
+                        stacks >
+                        0
                     );
 
 
@@ -2650,15 +3491,6 @@
                      * =================================================
                      * FLOOD / FLOOD SYMBOLS
                      * =================================================
-                     *
-                     * Если выбрана хотя бы одна причина:
-                     *
-                     * Flood            -> disabled
-                     * Flood символами  -> disabled
-                     *
-                     * После Undo / Reset reasonStacks изменится,
-                     * afterStateChange() вызовет эту функцию снова,
-                     * и обе кнопки автоматически разблокируются.
                      */
 
                     if (
@@ -2735,7 +3567,8 @@
 
                             counter.classList.toggle(
                                 'vrh-reason__counter--empty',
-                                stacks === 0
+                                stacks ===
+                                0
                             );
                         }
 
@@ -2772,7 +3605,9 @@
                 );
 
 
-            if (!status) {
+            if (
+                !status
+            ) {
                 return;
             }
 
@@ -2795,7 +3630,9 @@
                 );
 
 
-            if (warning) {
+            if (
+                warning
+            ) {
                 warning.hidden =
                     !this.hasCriticalReason();
             }
@@ -2813,7 +3650,8 @@
                 mode
             ) {
                 mode.textContent =
-                    this.mode === 'report'
+                    this.mode ===
+                    'report'
                         ? 'Report Mode'
                         : 'Manual Mode';
             }
@@ -2821,13 +3659,15 @@
 
             this.panel?.classList.toggle(
                 'vrh-panel--report-mode',
-                this.mode === 'report'
+                this.mode ===
+                'report'
             );
 
 
             this.panel?.classList.toggle(
                 'vrh-panel--manual-mode',
-                this.mode === 'manual'
+                this.mode ===
+                'manual'
             );
 
 
@@ -2835,14 +3675,15 @@
              * Scanner доступен только
              * в Report Mode.
              */
-
             const scanButton =
                 this.panel?.querySelector(
                     '#vrh-scan-report'
                 );
 
 
-            if (scanButton) {
+            if (
+                scanButton
+            ) {
                 scanButton.disabled =
                     this.mode !==
                     'report';
@@ -2878,7 +3719,9 @@
                     ?.getPunishmentFields?.();
 
 
-            if (!fields) {
+            if (
+                !fields
+            ) {
                 return;
             }
 
@@ -2904,8 +3747,11 @@
 
 
                 fields.time.value =
-                    minutes > 0
-                        ? String(minutes)
+                    minutes >
+                    0
+                        ? String(
+                            minutes
+                        )
                         : '';
 
 
@@ -2923,7 +3769,8 @@
                 new Event(
                     'input',
                     {
-                        bubbles: true
+                        bubbles:
+                            true
                     }
                 )
             );
@@ -2933,7 +3780,8 @@
                 new Event(
                     'change',
                     {
-                        bubbles: true
+                        bubbles:
+                            true
                     }
                 )
             );
@@ -2966,9 +3814,12 @@
 
 
             try {
-                await navigator.clipboard.writeText(
-                    text
-                );
+
+                await navigator
+                    .clipboard
+                    .writeText(
+                        text
+                    );
 
 
                 this.flashCopyButton(
@@ -2976,6 +3827,7 @@
                 );
 
             } catch {
+
                 const temp =
                     document.createElement(
                         'textarea'
@@ -3026,7 +3878,9 @@
                 );
 
 
-            if (!button) {
+            if (
+                !button
+            ) {
                 return;
             }
 
@@ -3041,6 +3895,7 @@
 
             window.setTimeout(
                 () => {
+
                     button.textContent =
                         previous;
                 },
@@ -3069,7 +3924,9 @@
                 );
 
 
-            if (!input) {
+            if (
+                !input
+            ) {
                 return;
             }
 
@@ -3088,7 +3945,9 @@
                 );
 
 
-            if (counter) {
+            if (
+                counter
+            ) {
                 counter.textContent =
                     `${input.value.length} симв.`;
             }
@@ -3119,7 +3978,9 @@
 
 
                         const converted =
-                            map[lower];
+                            map[
+                                lower
+                                ];
 
 
                         if (
@@ -3131,7 +3992,8 @@
 
 
                         const uppercase =
-                            char !== lower &&
+                            char !==
+                            lower &&
                             char ===
                             char.toUpperCase();
 
@@ -3141,7 +4003,9 @@
                             : converted;
                     }
                 )
-                .join('');
+                .join(
+                    ''
+                );
         }
 
 
@@ -3169,13 +4033,17 @@
                             );
 
 
-                        if (input) {
+                        if (
+                            input
+                        ) {
                             input.value =
                                 '';
                         }
 
 
-                        if (counter) {
+                        if (
+                            counter
+                        ) {
                             counter.textContent =
                                 '0 симв.';
                         }
@@ -3193,13 +4061,16 @@
 
             this.resetScannerUI();
 
+
             window
                 .VimeReportViolationScanner
                 ?.clear?.();
 
+
             window
                 .VimeReportFloodScanner
                 ?.clear?.();
+
 
             this.afterStateChange();
         }
@@ -3225,7 +4096,7 @@
 
 
             /*
-             * Bootstrap-контейнер самого окна репорта.
+             * Bootstrap-контейнер окна репорта.
              */
             const modalContent =
                 modal.querySelector(
@@ -3233,10 +4104,13 @@
                 );
 
 
-            if (!modalContent) {
+            if (
+                !modalContent
+            ) {
                 console.warn(
                     '[VRH] .modal-content not found.'
                 );
+
 
                 return false;
             }
@@ -3244,7 +4118,7 @@
 
             /*
              * Если layout уже существует —
-             * просто убеждаемся, что панель внутри него.
+             * убеждаемся, что панель внутри него.
              */
             let layout =
                 modalContent.querySelector(
@@ -3252,12 +4126,15 @@
                 );
 
 
-            if (!layout) {
+            if (
+                !layout
+            ) {
 
                 layout =
                     document.createElement(
                         'div'
                     );
+
 
                 layout.className =
                     'vrh-integrated-layout';
@@ -3268,6 +4145,7 @@
                         'div'
                     );
 
+
                 reportSide.className =
                     'vrh-integrated-report';
 
@@ -3277,13 +4155,14 @@
                         'div'
                     );
 
+
                 helperSide.className =
                     'vrh-integrated-helper';
 
 
                 /*
-                 * Сохраняем все стандартные части
-                 * репорта VimeWorld.
+                 * Сохраняем стандартные части
+                 * репорта VimeWorld:
                  *
                  * header
                  * body
@@ -3305,20 +4184,22 @@
                          * в левую часть.
                          */
                         if (
-                            child === this.panel
+                            child ===
+                            this.panel
                         ) {
                             return;
                         }
 
 
                         /*
-                         * На всякий случай
-                         * не трогаем уже созданный layout.
+                         * Не трогаем уже созданный layout.
                          */
                         if (
-                            child.classList?.contains(
-                                'vrh-integrated-layout'
-                            )
+                            child
+                                .classList
+                                ?.contains(
+                                    'vrh-integrated-layout'
+                                )
                         ) {
                             return;
                         }
@@ -3349,6 +4230,7 @@
                 modalContent.appendChild(
                     layout
                 );
+
             } else {
 
                 const helperSide =
@@ -3389,7 +4271,9 @@
                     ?.getReportModal?.();
 
 
-            if (!modal) {
+            if (
+                !modal
+            ) {
                 return;
             }
 
@@ -3400,7 +4284,9 @@
                 );
 
 
-            if (!modalContent) {
+            if (
+                !modalContent
+            ) {
                 return;
             }
 
@@ -3411,11 +4297,14 @@
                 );
 
 
-            if (!layout) {
+            if (
+                !layout
+            ) {
 
                 modal.classList.remove(
                     'vrh-report-integrated'
                 );
+
 
                 return;
             }
@@ -3431,7 +4320,9 @@
              * Возвращаем оригинальные элементы
              * VimeWorld обратно в modal-content.
              */
-            if (reportSide) {
+            if (
+                reportSide
+            ) {
 
                 while (
                     reportSide.firstChild
@@ -3550,6 +4441,7 @@
             this.mode =
                 'report';
 
+
             this.userClosedForReportId =
                 null;
 
@@ -3573,6 +4465,7 @@
                     'vrh-panel--visible'
                 );
 
+
             this.panel.hidden =
                 false;
         }
@@ -3590,8 +4483,10 @@
                 this.currentReport =
                     null;
 
+
                 this.userClosedForReportId =
                     null;
+
 
                 this.mountToBody();
 
@@ -3626,6 +4521,7 @@
 
                 this.updateModeUI();
 
+
                 this.panel.hidden =
                     true;
             }
@@ -3650,6 +4546,7 @@
 
             this.mode =
                 'manual';
+
 
             this.userClosedForReportId =
                 null;
@@ -3682,6 +4579,7 @@
 
             this.resetScannerUI();
 
+
             this.updateModeUI();
 
 
@@ -3690,6 +4588,7 @@
                 .add(
                     'vrh-panel--visible'
                 );
+
 
             this.panel.hidden =
                 false;
@@ -3702,12 +4601,14 @@
 
         hide() {
             if (
-                this.mode === 'report' &&
+                this.mode ===
+                'report' &&
                 this.currentReport?.id
             ) {
                 this.userClosedForReportId =
                     this.currentReport.id;
             }
+
 
             this.panel
                 ?.classList
@@ -3715,7 +4616,10 @@
                     'vrh-panel--visible'
                 );
 
-            if (this.panel) {
+
+            if (
+                this.panel
+            ) {
                 this.panel.hidden =
                     true;
             }
@@ -3726,9 +4630,11 @@
             return Boolean(
                 this.panel &&
                 !this.panel.hidden &&
-                this.panel?.classList.contains(
-                    'vrh-panel--visible'
-                )
+                this.panel
+                    ?.classList
+                    .contains(
+                        'vrh-panel--visible'
+                    )
             );
         }
 
@@ -3748,38 +4654,84 @@
                 );
 
 
-            if (element) {
+            if (
+                element
+            ) {
                 element.textContent =
                     value;
             }
         }
 
+
         debug() {
             const panel =
                 this.panel;
 
+
             const computed =
                 panel
-                    ? window.getComputedStyle(panel)
+                    ? window.getComputedStyle(
+                        panel
+                    )
                     : null;
 
+
             return {
-                activeReportId: this.currentReport?.id ?? null,
-                reportDomPresent: Boolean(
-                    window.VimeReportDomAdapter?.isReportOpen?.()
-                ),
-                panelExists: Boolean(panel),
-                panelVisible: this.isVisible(),
-                hiddenProperty: Boolean(panel?.hidden),
-                hasVisibleClass: Boolean(
-                    panel?.classList.contains('vrh-panel--visible')
-                ),
-                panelMode: this.mode,
-                userClosedForReportId: this.userClosedForReportId ?? null,
-                computedDisplay: computed?.display ?? null,
-                computedVisibility: computed?.visibility ?? null,
-                computedOpacity: computed?.opacity ?? null,
-                pointerEvents: computed?.pointerEvents ?? null
+                activeReportId:
+                    this.currentReport?.id ??
+                    null,
+
+                reportDomPresent:
+                    Boolean(
+                        window
+                            .VimeReportDomAdapter
+                            ?.isReportOpen?.()
+                    ),
+
+                panelExists:
+                    Boolean(
+                        panel
+                    ),
+
+                panelVisible:
+                    this.isVisible(),
+
+                hiddenProperty:
+                    Boolean(
+                        panel?.hidden
+                    ),
+
+                hasVisibleClass:
+                    Boolean(
+                        panel
+                            ?.classList
+                            .contains(
+                                'vrh-panel--visible'
+                            )
+                    ),
+
+                panelMode:
+                this.mode,
+
+                userClosedForReportId:
+                    this.userClosedForReportId ??
+                    null,
+
+                computedDisplay:
+                    computed?.display ??
+                    null,
+
+                computedVisibility:
+                    computed?.visibility ??
+                    null,
+
+                computedOpacity:
+                    computed?.opacity ??
+                    null,
+
+                pointerEvents:
+                    computed?.pointerEvents ??
+                    null
             };
         }
     }
@@ -3788,7 +4740,11 @@
     window.VimeReportPanel =
         new VimeReportPanel();
 
+
     window.VimeReportPanelDebug =
-        () => window.VimeReportPanel.debug();
+        () =>
+            window
+                .VimeReportPanel
+                .debug();
 
 })();

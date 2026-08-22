@@ -6387,8 +6387,8 @@ body .table > tbody > tr:hover > * {
     box-shadow: 0 4px 18px rgba(0, 0, 0, 0.44);
     white-space: nowrap;
     transition:
-        background 120ms ease,
-        border-color 120ms ease;
+            background 120ms ease,
+            border-color 120ms ease;
 }
 
 .vrh-learning-action__btn:hover {
@@ -6565,9 +6565,9 @@ body .table > tbody > tr:hover > * {
     cursor: pointer;
     white-space: nowrap;
     transition:
-        background 100ms ease,
-        border-color 100ms ease,
-        color 100ms ease;
+            background 100ms ease,
+            border-color 100ms ease,
+            color 100ms ease;
 }
 
 .vrh-learning-dialog__category-btn:hover {
@@ -6616,9 +6616,9 @@ body .table > tbody > tr:hover > * {
     cursor: pointer;
     border: 1px solid transparent;
     transition:
-        background 120ms ease,
-        border-color 120ms ease,
-        color 120ms ease;
+            background 120ms ease,
+            border-color 120ms ease,
+            color 120ms ease;
 }
 
 .vrh-learning-dialog__btn:disabled {
@@ -6684,8 +6684,8 @@ body .table > tbody > tr:hover > * {
     opacity: 0;
     pointer-events: none;
     transition:
-        opacity 200ms ease,
-        transform 200ms ease;
+            opacity 200ms ease,
+            transform 200ms ease;
     z-index: 2147483642;
 }
 
@@ -6697,4 +6697,1185 @@ body .table > tbody > tr:hover > * {
 .vrh-learning-toast--error {
     border-color: rgba(255, 100, 100, 0.28);
     color: rgba(255, 120, 120, 0.96);
+}
+/* =====================================================================
+   VRH — REASON COLUMN CARDS
+   Три независимые колонки.
+   Каждая группа причин — отдельная карточка.
+   ===================================================================== */
+
+
+/* =========================================================
+   ОБЩИЙ КОНТЕЙНЕР ПРИЧИН
+   ========================================================= */
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reasons {
+    display: grid !important;
+
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr)) !important;
+
+    align-items:
+            start !important;
+
+    gap:
+            10px !important;
+
+    width:
+            100% !important;
+
+    margin:
+            10px 0 0 !important;
+
+    padding:
+            0 10px 12px !important;
+
+    overflow:
+            visible !important;
+}
+
+
+/* =========================================================
+   КАЖДАЯ ИЗ ТРЁХ КОЛОНОК
+   ========================================================= */
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reason-column {
+    display:
+            flex !important;
+
+    flex-direction:
+            column !important;
+
+    gap:
+            10px !important;
+
+    min-width:
+            0 !important;
+}
+
+
+/* =========================================================
+   КАЖДАЯ ГРУППА — ОТДЕЛЬНЫЙ ЯЩИЧЕК
+   ========================================================= */
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reason-section {
+    width:
+            100% !important;
+
+    min-width:
+            0 !important;
+
+    margin:
+            0 !important;
+
+    padding:
+            8px !important;
+
+    background:
+            rgba(10, 29, 46, 0.78) !important;
+
+    border:
+            1px solid rgba(87, 143, 192, 0.18) !important;
+
+    border-radius:
+            10px !important;
+
+    box-shadow:
+            0 5px 16px rgba(0, 0, 0, 0.10) !important;
+}
+
+
+/* =========================================================
+   ЗАГОЛОВОК ГРУППЫ
+   ========================================================= */
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reason-section__title {
+    min-height:
+            0 !important;
+
+    display:
+            block !important;
+
+    margin:
+            0 0 7px !important;
+
+    padding:
+            0 1px 6px !important;
+
+    color:
+            rgba(201, 219, 236, 0.92) !important;
+
+    border-bottom:
+            1px solid rgba(95, 151, 199, 0.14) !important;
+
+    font-size:
+            10px !important;
+
+    font-weight:
+            800 !important;
+
+    line-height:
+            1.15 !important;
+
+    letter-spacing:
+            0 !important;
+
+    text-transform:
+            none !important;
+}
+
+
+/* Старую декоративную линию убираем */
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reason-section__title::after {
+    display:
+            none !important;
+}
+
+
+/* =========================================================
+   СЕТКА ВНУТРИ КАРТОЧКИ
+   ========================================================= */
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reason-section__grid {
+    display:
+            grid !important;
+
+    grid-template-columns:
+        1fr !important;
+
+    gap:
+            4px !important;
+
+    width:
+            100% !important;
+}
+
+
+/* =========================================================
+   ПЛИТКА ПРИЧИНЫ
+   ========================================================= */
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reason {
+    position:
+            relative !important;
+
+    width:
+            100% !important;
+
+    min-width:
+            0 !important;
+
+    min-height:
+            31px !important;
+
+    height:
+            auto !important;
+
+    display:
+            flex !important;
+
+    align-items:
+            center !important;
+
+    justify-content:
+            flex-start !important;
+
+    padding:
+            5px 8px !important;
+
+    margin:
+            0 !important;
+
+    gap:
+            0 !important;
+
+    background:
+            rgba(25, 47, 66, 0.94) !important;
+
+    color:
+            rgba(226, 236, 245, 0.95) !important;
+
+    border:
+            1px solid rgba(101, 151, 193, 0.20) !important;
+
+    border-radius:
+            7px !important;
+
+    box-shadow:
+            none !important;
+
+    font-size:
+            9.5px !important;
+
+    font-weight:
+            700 !important;
+
+    line-height:
+            1.12 !important;
+
+    text-align:
+            left !important;
+
+    white-space:
+            normal !important;
+
+    transition:
+            background 120ms ease,
+            border-color 120ms ease,
+            box-shadow 120ms ease !important;
+}
+
+
+/* =========================================================
+   ТЕКСТ ПЛИТКИ
+   ========================================================= */
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reason__label {
+    display:
+            block !important;
+
+    width:
+            100% !important;
+
+    min-width:
+            0 !important;
+
+    margin:
+            0 !important;
+
+    text-align:
+            left !important;
+
+    line-height:
+            1.12 !important;
+
+    word-break:
+            normal !important;
+
+    overflow-wrap:
+            anywhere !important;
+}
+
+
+/* =========================================================
+   ИКОНКИ / ЭМОДЗИ УБИРАЕМ
+   ========================================================= */
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reason__icon {
+    display:
+            none !important;
+
+    width:
+            0 !important;
+
+    min-width:
+            0 !important;
+
+    max-width:
+            0 !important;
+
+    height:
+            0 !important;
+
+    margin:
+            0 !important;
+
+    padding:
+            0 !important;
+
+    opacity:
+            0 !important;
+
+    visibility:
+            hidden !important;
+}
+
+
+/* =========================================================
+   HOVER
+   ========================================================= */
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reason:hover:not(:disabled) {
+    background:
+            rgba(31, 58, 80, 0.98) !important;
+
+    border-color:
+            rgba(88, 169, 241, 0.42) !important;
+
+    transform:
+            none !important;
+
+    filter:
+            none !important;
+}
+
+
+/* =========================================================
+   SELECTED
+   ========================================================= */
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reason--selected {
+    background:
+            rgba(27, 67, 102, 0.98) !important;
+
+    border-color:
+            rgba(87, 177, 255, 0.82) !important;
+
+    box-shadow:
+            inset 3px 0 0 rgba(87, 177, 255, 0.92) !important;
+}
+
+
+/* =========================================================
+   RECOMMENDED
+   ========================================================= */
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reason--recommended:not(.vrh-reason--selected) {
+    border-color:
+            rgba(239, 174, 72, 0.62) !important;
+
+    box-shadow:
+            inset 3px 0 0 rgba(239, 174, 72, 0.72) !important;
+}
+
+
+/* =========================================================
+   СЧЁТЧИК ×1 / ×2
+   ========================================================= */
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reason__counter {
+    position:
+            absolute !important;
+
+    top:
+            50% !important;
+
+    right:
+            6px !important;
+
+    transform:
+            translateY(-50%) !important;
+
+    width:
+            auto !important;
+
+    min-width:
+            21px !important;
+
+    height:
+            17px !important;
+
+    padding:
+            0 4px !important;
+
+    margin:
+            0 !important;
+
+    background:
+            rgba(3, 15, 25, 0.46) !important;
+
+    border:
+            1px solid rgba(105, 165, 218, 0.16) !important;
+
+    border-radius:
+            999px !important;
+
+    font-size:
+            8px !important;
+
+    line-height:
+            17px !important;
+
+    text-align:
+            center !important;
+}
+
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reason__counter--empty {
+    display:
+            none !important;
+}
+
+
+/* =========================================================
+   ЕСЛИ COUNTER ЕСТЬ — ОСТАВЛЯЕМ МЕСТО СПРАВА
+   ========================================================= */
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reason:has(.vrh-reason__counter:not(.vrh-reason__counter--empty)) {
+    padding-right:
+            34px !important;
+}
+
+
+/* =========================================================
+   DISABLED / MAXED
+   ========================================================= */
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reason:disabled,
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reason--maxed {
+    opacity:
+            0.45 !important;
+
+    cursor:
+            default !important;
+
+    transform:
+            none !important;
+}
+
+
+/* =========================================================
+   CRITICAL CARD
+   ========================================================= */
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reason-section--critical {
+    background:
+            rgba(52, 22, 30, 0.56) !important;
+
+    border-color:
+            rgba(208, 73, 88, 0.24) !important;
+}
+
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reason-section--critical
+.vrh-reason-section__title {
+    color:
+            rgba(247, 177, 186, 0.95) !important;
+
+    border-bottom-color:
+            rgba(211, 78, 91, 0.20) !important;
+}
+
+
+/* =========================================================
+   CRITICAL TILE
+   ========================================================= */
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reason--critical {
+    background:
+            rgba(92, 30, 41, 0.90) !important;
+
+    color:
+            rgba(246, 220, 223, 0.96) !important;
+
+    border-color:
+            rgba(214, 78, 92, 0.30) !important;
+}
+
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reason--critical:hover:not(:disabled) {
+    background:
+            rgba(108, 34, 47, 0.96) !important;
+
+    border-color:
+            rgba(229, 92, 106, 0.50) !important;
+}
+
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reason--critical.vrh-reason--selected {
+    background:
+            rgba(126, 36, 50, 0.98) !important;
+
+    border-color:
+            rgba(255, 111, 124, 0.82) !important;
+
+    box-shadow:
+            inset 3px 0 0 rgba(255, 111, 124, 0.92) !important;
+}
+
+
+/* =========================================================
+   МОБИЛЬНАЯ / УЗКАЯ ШИРИНА
+   ========================================================= */
+
+@media (max-width: 1200px) {
+
+    #view_report.vrh-report-integrated
+    .vrh-integrated-helper
+    .vrh-reasons {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+
+
+@media (max-width: 850px) {
+
+    #view_report.vrh-report-integrated
+    .vrh-integrated-helper
+    .vrh-reasons {
+        grid-template-columns:
+            1fr !important;
+    }
+}
+/* =====================================================================
+   VRH — FINAL REASON LAYOUT TUNING
+   Critical вниз на всю ширину + чуть крупнее обычные карточки.
+   ===================================================================== */
+
+
+/* =========================================================
+   ОСНОВНЫЕ 3 КОЛОНКИ — ЧУТЬ БОЛЬШЕ
+   ========================================================= */
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reasons {
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr)) !important;
+
+    gap:
+            12px !important;
+}
+
+
+/* =========================================================
+   ОБЫЧНЫЕ КАРТОЧКИ — ЧУТЬ БОЛЬШЕ
+   ========================================================= */
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reason-section:not(.vrh-reason-section--critical) {
+    padding:
+            10px !important;
+
+    border-radius:
+            11px !important;
+}
+
+
+/* =========================================================
+   ЗАГОЛОВКИ ОБЫЧНЫХ БЛОКОВ
+   ========================================================= */
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reason-section:not(.vrh-reason-section--critical)
+.vrh-reason-section__title {
+    margin-bottom:
+            8px !important;
+
+    padding-bottom:
+            7px !important;
+
+    font-size:
+            10.5px !important;
+}
+
+
+/* =========================================================
+   ОБЫЧНЫЕ ПЛИТКИ — ЧУТЬ БОЛЬШЕ
+   ========================================================= */
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reason-section:not(.vrh-reason-section--critical)
+.vrh-reason {
+    min-height:
+            36px !important;
+
+    padding:
+            7px 9px !important;
+
+    font-size:
+            10px !important;
+}
+
+
+/* =========================================================
+   CRITICAL-КАРТОЧКУ ВЫНОСИМ ВНИЗ НА ВСЮ ШИРИНУ
+   ========================================================= */
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reason-section--critical {
+    grid-column:
+            1 / -1 !important;
+
+    width:
+            100% !important;
+
+    margin-top:
+            2px !important;
+
+    padding:
+            9px 10px 10px !important;
+
+    background:
+            rgba(52, 22, 30, 0.56) !important;
+
+    border:
+            1px solid rgba(208, 73, 88, 0.24) !important;
+
+    border-radius:
+            10px !important;
+}
+
+
+/* =========================================================
+   ВНУТРИ CRITICAL — ОДНА СТРОКА
+   ========================================================= */
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reason-section--critical
+.vrh-reason-section__grid {
+    display:
+            grid !important;
+
+    grid-template-columns:
+        repeat(7, minmax(0, 1fr)) !important;
+
+    gap:
+            5px !important;
+}
+
+
+/* =========================================================
+   CRITICAL ПЛИТКИ
+   ========================================================= */
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reason-section--critical
+.vrh-reason {
+    min-height:
+            34px !important;
+
+    padding:
+            6px 7px !important;
+
+    font-size:
+            9px !important;
+
+    text-align:
+            center !important;
+
+    justify-content:
+            center !important;
+}
+
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reason-section--critical
+.vrh-reason__label {
+    text-align:
+            center !important;
+}
+
+
+/* =========================================================
+   ЗАГОЛОВОК CRITICAL
+   ========================================================= */
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reason-section--critical
+.vrh-reason-section__title {
+    margin-bottom:
+            7px !important;
+
+    padding-bottom:
+            6px !important;
+}
+
+
+/* =========================================================
+   ЕСЛИ МЕСТА МАЛО — CRITICAL В 4 КОЛОНКИ
+   ========================================================= */
+
+@media (max-width: 1500px) {
+
+    #view_report.vrh-report-integrated
+    .vrh-integrated-helper
+    .vrh-reason-section--critical
+    .vrh-reason-section__grid {
+        grid-template-columns:
+            repeat(4, minmax(0, 1fr)) !important;
+    }
+}
+
+
+/* =========================================================
+   ЕСЛИ ЕЩЁ УЖЕ — В 3 КОЛОНКИ
+   ========================================================= */
+
+@media (max-width: 1100px) {
+
+    #view_report.vrh-report-integrated
+    .vrh-integrated-helper
+    .vrh-reason-section--critical
+    .vrh-reason-section__grid {
+        grid-template-columns:
+            repeat(3, minmax(0, 1fr)) !important;
+    }
+}
+/* =====================================================================
+   VRH — REASON LAYOUT FINAL TUNING
+   Critical снизу на всю ширину.
+   Обычные карточки и плитки немного крупнее.
+   ===================================================================== */
+
+
+/* =========================================================
+   ТРИ ОСНОВНЫЕ КОЛОНКИ
+   ========================================================= */
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reasons {
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr)) !important;
+
+    gap:
+            12px !important;
+}
+
+
+/* =========================================================
+   ОБЫЧНЫЕ КАРТОЧКИ ЧУТЬ КРУПНЕЕ
+   ========================================================= */
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reason-section:not(.vrh-reason-section--critical) {
+    padding:
+            10px !important;
+
+    border-radius:
+            11px !important;
+}
+
+
+/* =========================================================
+   ЗАГОЛОВКИ ОБЫЧНЫХ КАРТОЧЕК
+   ========================================================= */
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reason-section:not(.vrh-reason-section--critical)
+.vrh-reason-section__title {
+    margin-bottom:
+            8px !important;
+
+    padding-bottom:
+            7px !important;
+
+    font-size:
+            10.5px !important;
+}
+
+
+/* =========================================================
+   ОБЫЧНЫЕ ПЛИТКИ ЧУТЬ БОЛЬШЕ
+   ========================================================= */
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reason-section:not(.vrh-reason-section--critical)
+.vrh-reason {
+    min-height:
+            36px !important;
+
+    padding:
+            7px 9px !important;
+
+    font-size:
+            10px !important;
+
+    line-height:
+            1.15 !important;
+}
+
+
+/* =========================================================
+   CRITICAL — ОТДЕЛЬНАЯ КАРТОЧКА НА ВСЮ ШИРИНУ
+   ========================================================= */
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reasons
+> .vrh-reason-section--critical {
+    grid-column:
+            1 / -1 !important;
+
+    width:
+            100% !important;
+
+    margin:
+            0 !important;
+
+    padding:
+            10px !important;
+
+    background:
+            rgba(52, 22, 30, 0.56) !important;
+
+    border:
+            1px solid rgba(208, 73, 88, 0.24) !important;
+
+    border-radius:
+            11px !important;
+
+    box-shadow:
+            0 5px 16px rgba(0, 0, 0, 0.10) !important;
+}
+
+
+/* =========================================================
+   ЗАГОЛОВОК CRITICAL
+   ========================================================= */
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reasons
+> .vrh-reason-section--critical
+.vrh-reason-section__title {
+    margin:
+            0 0 8px !important;
+
+    padding:
+            0 1px 7px !important;
+
+    color:
+            rgba(247, 177, 186, 0.95) !important;
+
+    border-bottom:
+            1px solid rgba(211, 78, 91, 0.20) !important;
+
+    font-size:
+            10.5px !important;
+
+    font-weight:
+            800 !important;
+}
+
+
+/* =========================================================
+   КРАСНЫЕ ПЛИТКИ — ГОРИЗОНТАЛЬНАЯ СЕТКА
+   ========================================================= */
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reasons
+> .vrh-reason-section--critical
+.vrh-reason-section__grid {
+    display:
+            grid !important;
+
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr)) !important;
+
+    gap:
+            5px !important;
+
+    width:
+            100% !important;
+}
+
+
+/* =========================================================
+   КРАСНЫЕ ПЛИТКИ
+   ========================================================= */
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reasons
+> .vrh-reason-section--critical
+.vrh-reason {
+    width:
+            100% !important;
+
+    min-width:
+            0 !important;
+
+    min-height:
+            35px !important;
+
+    padding:
+            6px 9px !important;
+
+    display:
+            flex !important;
+
+    align-items:
+            center !important;
+
+    justify-content:
+            flex-start !important;
+
+    background:
+            rgba(92, 30, 41, 0.90) !important;
+
+    border:
+            1px solid rgba(214, 78, 92, 0.30) !important;
+
+    border-radius:
+            7px !important;
+
+    color:
+            rgba(246, 220, 223, 0.96) !important;
+
+    font-size:
+            9.5px !important;
+
+    font-weight:
+            700 !important;
+
+    line-height:
+            1.15 !important;
+
+    text-align:
+            left !important;
+}
+
+
+/* =========================================================
+   ТЕКСТ КРАСНЫХ ПЛИТОК
+   ========================================================= */
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reasons
+> .vrh-reason-section--critical
+.vrh-reason__label {
+    width:
+            100% !important;
+
+    text-align:
+            left !important;
+}
+
+
+/* =========================================================
+   CRITICAL HOVER
+   ========================================================= */
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reasons
+> .vrh-reason-section--critical
+.vrh-reason:hover:not(:disabled) {
+    background:
+            rgba(108, 34, 47, 0.96) !important;
+
+    border-color:
+            rgba(229, 92, 106, 0.50) !important;
+}
+
+
+/* =========================================================
+   CRITICAL SELECTED
+   ========================================================= */
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reasons
+> .vrh-reason-section--critical
+.vrh-reason--selected {
+    background:
+            rgba(126, 36, 50, 0.98) !important;
+
+    border-color:
+            rgba(255, 111, 124, 0.82) !important;
+
+    box-shadow:
+            inset 3px 0 0 rgba(255, 111, 124, 0.92) !important;
+}
+
+
+/* =========================================================
+   НИКАКИХ ИКОНОК
+   ========================================================= */
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reason__icon {
+    display:
+            none !important;
+}
+/* =====================================================================
+   VRH — SCANNER RECOMMENDATION COLORS
+   Разные цвета для разных типов нарушений.
+   ===================================================================== */
+
+
+/* =========================================================
+   МАТ / АМОРАЛ
+   Янтарный
+   ========================================================= */
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reason--scan-mat:not(.vrh-reason--selected) {
+    background:
+            linear-gradient(
+                    180deg,
+                    rgba(83, 62, 22, 0.96),
+                    rgba(59, 43, 16, 0.98)
+            ) !important;
+
+    border-color:
+            rgba(218, 166, 65, 0.82) !important;
+
+    color:
+            #fff1cd !important;
+
+    box-shadow:
+            inset 3px 0 0 rgba(231, 177, 69, 0.96),
+            0 0 12px rgba(218, 166, 65, 0.08) !important;
+}
+
+
+/* =========================================================
+   ОБЫЧНОЕ ОСКОРБЛЕНИЕ ИГРОКА
+   Тёмно-зелёный
+   ========================================================= */
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reason--scan-insult:not(.vrh-reason--selected) {
+    background:
+            linear-gradient(
+                    180deg,
+                    rgba(27, 78, 59, 0.97),
+                    rgba(20, 57, 44, 0.99)
+            ) !important;
+
+    border-color:
+            rgba(75, 181, 132, 0.76) !important;
+
+    color:
+            #dff8eb !important;
+
+    box-shadow:
+            inset 3px 0 0 rgba(82, 199, 144, 0.94),
+            0 0 12px rgba(71, 181, 129, 0.08) !important;
+}
+
+
+/* =========================================================
+   ОСКОРБЛЕНИЕ ИГРОКА + МАТ
+   Тёмно-оранжевый
+   ========================================================= */
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reason--scan-insult-mat:not(.vrh-reason--selected) {
+    background:
+            linear-gradient(
+                    180deg,
+                    rgba(105, 63, 22, 0.97),
+                    rgba(75, 43, 15, 0.99)
+            ) !important;
+
+    border-color:
+            rgba(225, 145, 55, 0.82) !important;
+
+    color:
+            #fff0dc !important;
+
+    box-shadow:
+            inset 3px 0 0 rgba(236, 151, 57, 0.96),
+            0 0 12px rgba(225, 145, 55, 0.09) !important;
+}
+
+
+/* =========================================================
+   ОСКОРБЛЕНИЕ РОДСТВЕННИКОВ
+   Красный
+   ========================================================= */
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reason--scan-relative:not(.vrh-reason--selected) {
+    background:
+            linear-gradient(
+                    180deg,
+                    rgba(111, 32, 45, 0.97),
+                    rgba(77, 22, 32, 0.99)
+            ) !important;
+
+    border-color:
+            rgba(232, 78, 96, 0.88) !important;
+
+    color:
+            #ffe5e8 !important;
+
+    box-shadow:
+            inset 3px 0 0 rgba(245, 82, 101, 0.98),
+            0 0 14px rgba(222, 58, 78, 0.12) !important;
+}
+
+
+/* =========================================================
+   HOVER — СОХРАНЯЕМ ЦВЕТ КАТЕГОРИИ
+   ========================================================= */
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reason--scan-mat:hover:not(:disabled):not(.vrh-reason--selected),
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reason--scan-insult:hover:not(:disabled):not(.vrh-reason--selected),
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reason--scan-insult-mat:hover:not(:disabled):not(.vrh-reason--selected),
+
+#view_report.vrh-report-integrated
+.vrh-integrated-helper
+.vrh-reason--scan-relative:hover:not(:disabled):not(.vrh-reason--selected) {
+    filter:
+            brightness(1.08) !important;
+
+    transform:
+            none !important;
 }

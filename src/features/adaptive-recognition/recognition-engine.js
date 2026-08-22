@@ -979,7 +979,9 @@
                         .normalized,
 
                     category:
-                        null,
+                        aliases?.getCategoryForWord?.(
+                            exactCandidate.result.normalized
+                        ) ?? null,
 
                     confidence:
                         1.0,
@@ -1363,7 +1365,13 @@
                         : null,
 
                 category:
-                    null,
+                    recognized
+                        ? (
+                            aliases?.getCategoryForWord?.(
+                                best.canonical
+                            ) ?? null
+                        )
+                        : null,
 
                 confidence:
                 best
