@@ -63,7 +63,7 @@
 
 <p align="center">
   <img
-    src="docs/screenshots/report-scanner-auto-detection.png"
+    src="docs/images/report-scanner-auto-detection.png"
     alt="VimeWorld Report Helper — сканирование репорта и автоматическая подсветка причин"
     width="100%"
   >
