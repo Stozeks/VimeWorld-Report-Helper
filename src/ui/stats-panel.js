@@ -49,7 +49,6 @@
                     PANEL_ID
                 );
 
-
             if (existing) {
                 this.panel =
                     existing;
@@ -63,326 +62,207 @@
                     'aside'
                 );
 
-
             panel.id =
                 PANEL_ID;
 
-
-            /*
-             * Пока стили здесь.
-             *
-             * На финальном дизайн-этапе
-             * вынесем всё в report-helper.css.
-             */
-
-            panel.style.position =
-                'fixed';
-
-            panel.style.top =
-                '18px';
-
-            panel.style.left =
-                '18px';
-
-            panel.style.width =
-                '285px';
-
-            panel.style.zIndex =
-                '999998';
-
-            panel.style.background =
-                '#22272d';
-
-            panel.style.color =
-                '#ffffff';
-
-            panel.style.border =
-                '1px solid rgba(255,255,255,0.08)';
-
-            panel.style.borderRadius =
-                '12px';
-
-            panel.style.boxShadow =
-                '0 12px 35px rgba(0,0,0,0.28)';
-
-            panel.style.fontFamily =
-                'Arial, Helvetica, sans-serif';
-
-            panel.style.overflow =
-                'hidden';
+            panel.className =
+                'vrh-stats-panel';
 
 
             panel.innerHTML = `
-
-                <div
-                    id="vrh-stats-header"
-                    style="
-                        display:flex;
-                        align-items:center;
-                        justify-content:space-between;
-                        padding:13px 14px;
-                        background:rgba(0,0,0,0.12);
-                    "
-                >
-
-                    <div>
-
-                        <div
-                            style="
-                                font-size:14px;
-                                font-weight:700;
-                            "
-                        >
-                            VRH • Статистика
-                        </div>
-
-                        <div
-                            id="vrh-stats-period"
-                            style="
-                                margin-top:3px;
-                                color:#70bfff;
-                                font-size:11px;
-                            "
-                        >
-                            —
-                        </div>
-
-                    </div>
-
-
-                    <button
-                        id="vrh-stats-collapse"
-                        type="button"
-                        title="Свернуть"
-                        style="
-                            width:30px;
-                            height:30px;
-                            border:0;
-                            border-radius:7px;
-                            background:rgba(255,255,255,0.07);
-                            color:#fff;
-                            cursor:pointer;
-                            font-size:17px;
-                        "
-                    >
-                        −
-                    </button>
-
+        <div
+            id="vrh-stats-header"
+            class="vrh-stats-panel__header"
+        >
+            <div class="vrh-stats-panel__heading">
+                <div class="vrh-stats-panel__eyebrow">
+                    VRH
+                    <span></span>
+                    STATISTICS
                 </div>
 
-
-                <div
-                    id="vrh-stats-body"
-                    style="
-                        padding:14px;
-                    "
-                >
-
-                    <div
-                        style="
-                            display:grid;
-                            grid-template-columns:1fr 1fr;
-                            gap:8px;
-                        "
-                    >
-
-                        <div
-                            style="
-                                padding:10px;
-                                border-radius:8px;
-                                background:rgba(255,255,255,0.04);
-                            "
-                        >
-                            <div
-                                style="
-                                    color:#8e98a4;
-                                    font-size:10px;
-                                    text-transform:uppercase;
-                                "
-                            >
-                                Закрыто
-                            </div>
-
-                            <strong
-                                id="vrh-stats-closed"
-                                style="
-                                    display:block;
-                                    margin-top:5px;
-                                    font-size:20px;
-                                "
-                            >
-                                0
-                            </strong>
-
-                            <div
-                                style="
-                                    margin-top:2px;
-                                    color:#7c8792;
-                                    font-size:10px;
-                                "
-                            >
-                                × 2 балла
-                            </div>
-                        </div>
-
-
-                        <div
-                            style="
-                                padding:10px;
-                                border-radius:8px;
-                                background:rgba(255,255,255,0.04);
-                            "
-                        >
-                            <div
-                                style="
-                                    color:#8e98a4;
-                                    font-size:10px;
-                                    text-transform:uppercase;
-                                "
-                            >
-                                Отклонено
-                            </div>
-
-                            <strong
-                                id="vrh-stats-rejected"
-                                style="
-                                    display:block;
-                                    margin-top:5px;
-                                    font-size:20px;
-                                "
-                            >
-                                0
-                            </strong>
-
-                            <div
-                                style="
-                                    margin-top:2px;
-                                    color:#7c8792;
-                                    font-size:10px;
-                                "
-                            >
-                                × 1 балл
-                            </div>
-                        </div>
-
-                    </div>
-
-
-                    <div
-                        style="
-                            display:flex;
-                            align-items:center;
-                            justify-content:space-between;
-                            margin-top:9px;
-                            padding:12px;
-                            border-radius:8px;
-                            background:rgba(255,255,255,0.055);
-                        "
-                    >
-
-                        <div>
-                            <div
-                                style="
-                                    color:#8e98a4;
-                                    font-size:10px;
-                                    text-transform:uppercase;
-                                "
-                            >
-                                Всего обработано
-                            </div>
-
-                            <strong
-                                id="vrh-stats-total"
-                                style="
-                                    display:block;
-                                    margin-top:4px;
-                                    font-size:17px;
-                                "
-                            >
-                                0
-                            </strong>
-                        </div>
-
-
-                        <div
-                            style="
-                                text-align:right;
-                            "
-                        >
-                            <div
-                                style="
-                                    color:#f5a623;
-                                    font-size:10px;
-                                    text-transform:uppercase;
-                                    font-weight:700;
-                                "
-                            >
-                                Баллы
-                            </div>
-
-                            <strong
-                                id="vrh-stats-points"
-                                style="
-                                    display:block;
-                                    margin-top:4px;
-                                    color:#f5a623;
-                                    font-size:23px;
-                                "
-                            >
-                                0
-                            </strong>
-                        </div>
-
-                    </div>
-
-
-                    <div
-                        style="
-                            margin-top:10px;
-                            padding-top:9px;
-                            border-top:1px solid rgba(255,255,255,0.07);
-                            color:#7f8994;
-                            font-size:10px;
-                            display:flex;
-                            justify-content:space-between;
-                        "
-                    >
-
-                        <span
-                            id="vrh-stats-day"
-                        >
-                            —
-                        </span>
-
-                        <span>
-                            Локальная статистика
-                        </span>
-
-                    </div>
-
+                <div class="vrh-stats-panel__title">
+                    Статистика
                 </div>
 
+                <div
+                    id="vrh-stats-period"
+                    class="vrh-stats-panel__period"
+                >
+                    —
+                </div>
+            </div>
+
+
+            <button
+                id="vrh-stats-collapse"
+                class="vrh-stats-panel__collapse"
+                type="button"
+                title="Свернуть"
+            >
+                −
+            </button>
+        </div>
+
+
+        <div
+            id="vrh-stats-body"
+            class="vrh-stats-panel__body"
+        >
+            <div class="vrh-stats-panel__metrics">
 
                 <div
-                    id="vrh-stats-collapsed"
-                    hidden
-                    style="
-                        padding:10px 14px;
-                        cursor:pointer;
-                        font-size:12px;
+                    class="
+                        vrh-stats-metric
+                        vrh-stats-metric--closed
                     "
                 >
-                    📊
-                    <strong id="vrh-stats-mini-total">
+                    <div class="vrh-stats-metric__top">
+                        <span class="vrh-stats-metric__dot"></span>
+
+                        <span class="vrh-stats-metric__label">
+                            Закрыто
+                        </span>
+                    </div>
+
+                    <strong
+                        id="vrh-stats-closed"
+                        class="vrh-stats-metric__value"
+                    >
                         0
                     </strong>
-                    реп. •
-                    <strong id="vrh-stats-mini-points">
+
+                    <div class="vrh-stats-metric__meta">
+                        × 2 балла
+                    </div>
+                </div>
+
+
+                <div
+                    class="
+                        vrh-stats-metric
+                        vrh-stats-metric--rejected
+                    "
+                >
+                    <div class="vrh-stats-metric__top">
+                        <span class="vrh-stats-metric__dot"></span>
+
+                        <span class="vrh-stats-metric__label">
+                            Отклонено
+                        </span>
+                    </div>
+
+                    <strong
+                        id="vrh-stats-rejected"
+                        class="vrh-stats-metric__value"
+                    >
                         0
                     </strong>
-                    бал.
+
+                    <div class="vrh-stats-metric__meta">
+                        × 1 балл
+                    </div>
                 </div>
-            `;
+
+            </div>
+
+
+            <div class="vrh-stats-summary">
+
+                <div class="vrh-stats-summary__total">
+                    <span class="vrh-stats-summary__label">
+                        Всего обработано
+                    </span>
+
+                    <strong
+                        id="vrh-stats-total"
+                        class="vrh-stats-summary__value"
+                    >
+                        0
+                    </strong>
+                </div>
+
+
+                <div class="vrh-stats-summary__divider"></div>
+
+
+                <div class="vrh-stats-summary__points">
+                    <span class="vrh-stats-summary__label">
+                        Баллы
+                    </span>
+
+                    <strong
+                        id="vrh-stats-points"
+                        class="vrh-stats-summary__value"
+                    >
+                        0
+                    </strong>
+                </div>
+
+            </div>
+
+
+            <div class="vrh-stats-progress">
+                <div class="vrh-stats-progress__head">
+                    <span>
+                        Прогресс месяца
+                    </span>
+
+                    <span id="vrh-stats-day">
+                        —
+                    </span>
+                </div>
+
+                <div class="vrh-stats-progress__track">
+                    <div
+                        id="vrh-stats-progress-bar"
+                        class="vrh-stats-progress__bar"
+                    ></div>
+                </div>
+            </div>
+
+
+            <div class="vrh-stats-panel__footer">
+                <span class="vrh-stats-panel__status-dot"></span>
+
+                <span>
+                    Локальная статистика
+                </span>
+            </div>
+        </div>
+
+
+        <div
+            id="vrh-stats-collapsed"
+            class="vrh-stats-mini"
+            hidden
+        >
+            <span class="vrh-stats-mini__logo">
+                VRH
+            </span>
+
+            <span class="vrh-stats-mini__divider"></span>
+
+            <strong id="vrh-stats-mini-total">
+                0
+            </strong>
+
+            <span>
+                реп.
+            </span>
+
+            <strong
+                id="vrh-stats-mini-points"
+                class="vrh-stats-mini__points"
+            >
+                0
+            </strong>
+
+            <span>
+                бал.
+            </span>
+        </div>
+    `;
 
 
             document.body.appendChild(
@@ -396,8 +276,6 @@
 
             this.bindEvents();
         }
-
-
         /* =====================================================
            EVENTS
            ===================================================== */
@@ -577,7 +455,30 @@
                 '#vrh-stats-day',
                 `${stats.day} / ${stats.daysInMonth} день месяца`
             );
+            const progressBar =
+                this.panel?.querySelector(
+                    '#vrh-stats-progress-bar'
+                );
 
+            if (progressBar) {
+                const day =
+                    Number(stats.day) || 0;
+
+                const daysInMonth =
+                    Number(stats.daysInMonth) || 1;
+
+                const progress =
+                    Math.max(
+                        0,
+                        Math.min(
+                            100,
+                            (day / daysInMonth) * 100
+                        )
+                    );
+
+                progressBar.style.width =
+                    `${progress}%`;
+            }
 
             this.setText(
                 '#vrh-stats-mini-total',
