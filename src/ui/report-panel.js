@@ -790,10 +790,9 @@
 
             panel.innerHTML = `
 
-                <div class="vrh-panel__header">
+                                <div class="vrh-panel__header vrh-top-header">
 
-                    <div>
-
+                    <div class="vrh-top-header__identity">
                         <div class="vrh-panel__brand">
                             VimeWorld Report Helper
                         </div>
@@ -804,18 +803,32 @@
                         >
                             Manual Mode
                         </div>
-
                     </div>
 
 
-                    <button
-                        id="vrh-panel-close"
-                        class="vrh-panel__close"
-                        type="button"
-                        title="Закрыть"
-                    >
-                        ×
-                    </button>
+                    <div class="vrh-top-header__actions">
+
+                        <button
+    id="vrh-reset"
+    class="vrh-top-reset"
+    type="button"
+    title="Сбросить выбранное наказание"
+    aria-label="Сбросить выбранное наказание"
+>
+    <span class="vrh-top-reset__icon">↺</span>
+    <span class="vrh-top-reset__text">Сброс</span>
+</button>
+
+                        <button
+                            id="vrh-panel-close"
+                            class="vrh-panel__close"
+                            type="button"
+                            title="Закрыть"
+                        >
+                            ×
+                        </button>
+
+                    </div>
 
                 </div>
 
@@ -829,84 +842,132 @@
                 </div>
 
 
-                <div class="vrh-report-info">
+                <div class="vrh-report-info vrh-top-report-info">
 
-                    <div class="vrh-report-info__item">
-                        <span>Репорт</span>
-                        <strong id="vrh-report-id">—</strong>
+                    <div class="vrh-report-info__item vrh-top-info-card">
+                        <span>Report</span>
+
+                        <strong id="vrh-report-id">
+                            —
+                        </strong>
                     </div>
 
-                    <div class="vrh-report-info__item">
+
+                    <div class="vrh-report-info__item vrh-top-info-card vrh-top-info-card--player">
                         <span>Нарушитель</span>
-                        <strong id="vrh-violator">—</strong>
+
+                        <strong id="vrh-violator">
+                            —
+                        </strong>
                     </div>
 
-                    <div class="vrh-report-info__item">
-                        <span>Сообщений</span>
-                        <strong id="vrh-message-count">—</strong>
+
+                    <div class="vrh-report-info__item vrh-top-info-card">
+                        <span>Сообщения</span>
+
+                        <strong id="vrh-message-count">
+                            —
+                        </strong>
                     </div>
 
                 </div>
 
 
-                <div class="vrh-punishment-controls">
+                <section class="vrh-top-punishment">
 
-                    <input
-                        id="vrh-time"
-                        class="vrh-input vrh-input--time"
-                        type="text"
-                        placeholder="Время"
-                        readonly
-                    >
+                    <div class="vrh-top-punishment__header">
+
+                        <div>
+                            <div class="vrh-top-punishment__eyebrow">
+                                MODERATION
+                            </div>
+
+                            <div class="vrh-top-punishment__title">
+                                Наказание
+                            </div>
+                        </div>
 
 
-                    <input
-                        id="vrh-reason"
-                        class="vrh-input vrh-input--reason"
-                        type="text"
-                        placeholder="Причина"
-                        readonly
-                    >
+                        <div class="vrh-top-punishment__total">
+                            <span>Итого</span>
+
+                            <strong id="vrh-time-preview">
+                                0 мин.
+                            </strong>
+                        </div>
+
+                    </div>
+
+
+                    <div class="vrh-top-punishment__fields">
+
+                        <label class="vrh-top-field vrh-top-field--time">
+
+                            <span class="vrh-top-field__label">
+                                Время
+                            </span>
+
+                            <input
+                                id="vrh-time"
+                                class="vrh-input vrh-input--time vrh-top-field__input"
+                                type="text"
+                                placeholder="0"
+                                readonly
+                            >
+
+                        </label>
+
+
+                        <label class="vrh-top-field vrh-top-field--reason">
+
+                            <span class="vrh-top-field__label">
+                                Причина
+                            </span>
+
+                            <input
+                                id="vrh-reason"
+                                class="vrh-input vrh-input--reason vrh-top-field__input"
+                                type="text"
+                                placeholder="Причина не выбрана"
+                                readonly
+                            >
+
+                        </label>
+
+                    </div>
+
+
+                    <div class="vrh-punishment-summary vrh-top-punishment__summary">
+
+                        <span class="vrh-top-summary__label">
+                            Лимит группы
+                        </span>
+
+                        <span
+                            id="vrh-stack-status"
+                            class="vrh-stack-status"
+                        >
+                            Неадекватное поведение: 0 / 1440
+                        </span>
+
+                    </div>
 
 
                     <button
                         id="vrh-copy"
-                        class="vrh-action vrh-action--copy"
+                        class="vrh-action vrh-action--copy vrh-top-copy"
                         type="button"
                     >
-                        COPY
+                        <span class="vrh-top-copy__icon">
+                            ⧉
+                        </span>
+
+                        <span>
+                            Скопировать команду
+                        </span>
                     </button>
 
-
-                    <button
-                        id="vrh-reset"
-                        class="vrh-action vrh-action--reset"
-                        type="button"
-                    >
-                        RESET
-                    </button>
-
-                </div>
-
-
-                <div class="vrh-punishment-summary">
-
-                    <span
-                        id="vrh-time-preview"
-                        class="vrh-time-preview"
-                    >
-                        0 мин.
-                    </span>
-
-
-                    <span
-                        id="vrh-stack-status"
-                        class="vrh-stack-status"
-                    >
-                        Неадекватное поведение: 0 / 1440
-                    </span>
-
-                </div>
+                </section>
 
 
                 <!-- =================================================
@@ -3604,22 +3665,78 @@
                     '#vrh-stack-status'
                 );
 
-
-            if (
-                !status
-            ) {
+            if (!status) {
                 return;
             }
-
 
             const current =
                 this.getGroupMinutes(
                     'inappropriate-behaviour'
                 );
 
+            const limit = 1440;
 
             status.textContent =
-                `Неадекватное поведение: ${current} / 1440`;
+                `Неадекватное поведение: ${current} / ${limit}`;
+
+            // =================================================
+            // Индикатор лимита
+            // Зелёный → жёлтый → оранжевый → красный
+            // =================================================
+
+            const progress = Math.max(
+                0,
+                Math.min(current / limit, 1)
+            );
+
+            const percent = progress * 100;
+
+            // 120 = зелёный
+            // 60  = жёлтый
+            // 30  = оранжевый
+            // 0   = красный
+            const hue = 120 * (1 - progress);
+
+            const color =
+                current >= limit
+                    ? 'hsl(0 90% 58%)'
+                    : `hsl(${hue} 82% 55%)`;
+
+            const textColor =
+                current >= limit
+                    ? 'hsl(0 95% 68%)'
+                    : `hsl(${hue} 86% 65%)`;
+
+            status.style.setProperty(
+                'color',
+                textColor,
+                'important'
+            );
+
+            // Находим саму строку "Лимит группы"
+            const indicator =
+                status.closest(
+                    '.vrh-top-punishment__summary'
+                );
+
+            if (indicator) {
+                indicator.style.setProperty(
+                    '--vrh-stack-progress',
+                    `${percent}%`
+                );
+
+                indicator.style.setProperty(
+                    '--vrh-stack-color',
+                    color
+                );
+            }
+
+            if (current >= limit) {
+                status.style.textShadow =
+                    '0 0 7px hsl(0 90% 50% / 0.35)';
+            } else {
+                status.style.textShadow = 'none';
+            }
         }
 
 
